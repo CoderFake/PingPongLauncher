@@ -97,24 +97,27 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-  participant W as Web React
+  participant W as Web (SyncEngine)
   participant B as Broker EMQX
   participant E as ESP32
-  E->>B: CONNECT, LWT ppl/id/status = offline
-  E->>B: ppl/id/status = online (retain)
-  E->>B: SUBSCRIBE ppl/id/cmd
-  E->>B: ppl/id/state {rev, boot, fw, ...} (retain)
-  W->>B: SUBSCRIBE ppl/id/state, status, ota
-  B-->>W: state + status (retained)
-  Note over W: Kéo slider: gửi tối đa 150ms/lần,<br/>không gửi lại giá trị vừa gửi
-  W->>B: cmd {"id":"a1","sb1":75} QoS 1
+  E->>B: state {rev: 7, boot, sb1: 80} (retain)
+  B-->>W: state rev 7
+  Note over W: Kéo SB1 → 60: hiện 60 ngay (đang chờ)
+  W->>B: cmd {"id":"a1","sb1":60} QoS 1
+  B-->>W: state cũ rev 7 tới muộn
+  Note over W: Vẫn hiện 60, không giật về 80
   B->>E: cmd a1
-  E->>E: Áp dụng, rev + 1
-  B-->>E: cmd a1 (giao lại)
-  Note over E: id a1 đã xử lý, bỏ qua
-  E->>B: state {rev: 8, sb1: 75} (retain)
-  B-->>W: state rev 8
-  Note over W: Bỏ state có rev cũ hơn<br/>trong cùng boot
+  E->>E: Áp dụng, rev 8
+  E->>B: ack {id: a1, rev: 8}
+  E->>B: state {rev: 8, sb1: 60}
+  B-->>W: ack a1 (rev 8) + state rev 8
+  Note over W: ack khớp id và state.rev ≥ 8 → đã đồng bộ
+  W->>B: cmd {"id":"b2","feed":50}
+  Note over W: 2.5s không có ack → gửi lại cùng id b2
+  W->>B: cmd {"id":"b2","feed":50}
+  B->>E: cmd b2 (lần 1 và lần 2)
+  Note over E: Lần 2 trùng id → không áp dụng lại, chỉ gửi ack
+  E->>B: ack {id: b2, result: duplicate}
 ```
 
 ## 5. Cập nhật firmware qua OTA

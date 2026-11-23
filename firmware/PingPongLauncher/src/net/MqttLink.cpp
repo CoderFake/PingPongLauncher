@@ -12,6 +12,7 @@ void MqttLink::begin(const String& deviceId, MessageHandler onCommand,
   topicState_ = base + "state";
   topicStatus_ = base + "status";
   topicOta_ = base + "ota";
+  topicAck_ = base + "ack";
   clientId_ = "ppl-" + deviceId + "-" + String(esp_random() & 0xFFFF, HEX);
 
   client_.setServer(AppConfig::MQTT_HOST, AppConfig::MQTT_PORT);
@@ -42,6 +43,13 @@ bool MqttLink::publishState(const char* json) {
     return false;
   }
   return client_.publish(topicState_.c_str(), json, true);
+}
+
+bool MqttLink::publishAck(const char* json) {
+  if (!client_.connected()) {
+    return false;
+  }
+  return client_.publish(topicAck_.c_str(), json, false);
 }
 
 bool MqttLink::publishOta(const char* json) {

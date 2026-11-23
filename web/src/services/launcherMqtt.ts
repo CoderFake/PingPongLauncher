@@ -1,31 +1,29 @@
 import mqtt, { type MqttClient } from "mqtt";
 
 import { buildTopics, MQTT_URL, type DeviceTopics } from "../config/mqtt";
-import type { BrokerStatus, LauncherCommand, LauncherState, OtaStatus } from "../types/launcher";
+import type { AckMessage, BrokerStatus, LauncherCommand, LauncherState, OtaStatus } from "../types/launcher";
 import { makeCommandId } from "../utils/commandId";
-import { parseState } from "../utils/parseState";
+import { parseAck, parseState } from "../utils/parseState";
 
 /**
  * Callbacks fired by LauncherMqtt as messages and connection events arrive.
  */
 export interface LauncherMqttHandlers {
   onState: (state: LauncherState) => void;
+  onAck: (ack: AckMessage) => void;
   onDeviceStatus: (online: boolean) => void;
   onBrokerStatus: (status: BrokerStatus) => void;
   onOta: (status: OtaStatus) => void;
+  onConnected: () => void;
 }
-
-const DUPLICATE_WINDOW_MS = 300;
 
 /**
  * Browser-side MQTT session for one launcher device.
- * Commands carry a unique id and identical consecutive commands are suppressed.
+ * It only moves messages; retries and reconciliation live in SyncEngine.
  */
 export class LauncherMqtt {
   private client: MqttClient | null = null;
   private topics: DeviceTopics | null = null;
-  private lastBody = "";
-  private lastSentAt = 0;
 
   /**
    * Opens the broker connection and subscribes to the device topics.
@@ -47,9 +45,9 @@ export class LauncherMqtt {
 
     client.on("connect", () => {
       handlers.onBrokerStatus("connected");
-      client.subscribe([topics.state, topics.status, topics.ota], { qos: 1 }, (err) => {
+      client.subscribe([topics.state, topics.status, topics.ota, topics.ack], { qos: 1 }, (err) => {
         if (!err) {
-          this.send({ get: true });
+          handlers.onConnected();
         }
       });
     });
@@ -61,42 +59,32 @@ export class LauncherMqtt {
       const text = payload.toString();
       if (topic === topics.status) {
         handlers.onDeviceStatus(text === "online");
-        return;
-      }
-      if (topic === topics.ota) {
+      } else if (topic === topics.state) {
+        const state = parseState(text);
+        if (state) handlers.onState(state);
+      } else if (topic === topics.ack) {
+        const ack = parseAck(text);
+        if (ack) handlers.onAck(ack);
+      } else if (topic === topics.ota) {
         try {
           handlers.onOta(JSON.parse(text) as OtaStatus);
         } catch {
           return;
-        }
-        return;
-      }
-      if (topic === topics.state) {
-        const state = parseState(text);
-        if (state) {
-          handlers.onState(state);
         }
       }
     });
   }
 
   /**
-   * Publishes a command unless it repeats the previous one within a short window.
+   * Publishes a command; a missing id is generated. Returns false while offline.
    */
-  send(command: LauncherCommand): void {
+  publish(command: LauncherCommand & { id?: string }): boolean {
     if (!this.client || !this.topics || !this.client.connected) {
-      return;
+      return false;
     }
-    const body = JSON.stringify(command);
-    const now = Date.now();
-    if (!command.get && body === this.lastBody && now - this.lastSentAt < DUPLICATE_WINDOW_MS) {
-      return;
-    }
-    this.lastBody = body;
-    this.lastSentAt = now;
-
-    const payload = JSON.stringify({ id: makeCommandId(), ...command });
+    const payload = JSON.stringify({ ...command, id: command.id ?? makeCommandId() });
     this.client.publish(this.topics.cmd, payload, { qos: 1, retain: false });
+    return true;
   }
 
   /**
@@ -109,6 +97,5 @@ export class LauncherMqtt {
     }
     this.client = null;
     this.topics = null;
-    this.lastBody = "";
   }
 }

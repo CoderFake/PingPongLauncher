@@ -22,6 +22,26 @@ export interface LauncherState {
 }
 
 /**
+ * State fields the user can change and that are synced optimistically.
+ */
+export type SyncKey = "power" | "sb1" | "sb2" | "mode" | "range" | "angle" | "feed";
+
+/**
+ * Editable subset of the state.
+ */
+export type SyncPatch = Partial<Pick<LauncherState, SyncKey>>;
+
+/**
+ * Per-command acknowledgement published by the device on the ack topic.
+ */
+export interface AckMessage {
+  id: string;
+  rev: number;
+  boot: number;
+  result: "changed" | "unchanged" | "duplicate" | "state" | "ota" | "invalid";
+}
+
+/**
  * Partial update sent to the device; only included keys are applied.
  */
 export interface LauncherCommand {

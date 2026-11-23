@@ -1,4 +1,4 @@
-import type { LauncherState, TurretMode } from "../types/launcher";
+import type { AckMessage, LauncherState, TurretMode } from "../types/launcher";
 
 const MODES: readonly TurretMode[] = ["sweep", "random", "fixed"];
 
@@ -27,4 +27,19 @@ export function parseState(raw: string): LauncherState | null {
     return null;
   }
   return d as unknown as LauncherState;
+}
+
+/**
+ * Parses a command acknowledgement; returns null for malformed data.
+ */
+export function parseAck(raw: string): AckMessage | null {
+  try {
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof data.id !== "string" || typeof data.rev !== "number" || typeof data.boot !== "number") {
+      return null;
+    }
+    return data as unknown as AckMessage;
+  } catch {
+    return null;
+  }
 }

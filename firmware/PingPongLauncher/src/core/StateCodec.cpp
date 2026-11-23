@@ -27,13 +27,17 @@ CommandResult StateCodec::applyCommand(const uint8_t* payload, size_t length,
                                        LauncherState& state, OtaRequest& ota) {
   JsonDocument doc;
   if (deserializeJson(doc, payload, length)) {
+    lastId_[0] = '\0';
     return CommandResult::Invalid;
   }
 
+  lastId_[0] = '\0';
   const char* id = doc["id"];
   if (id == nullptr || strlen(id) == 0 || strlen(id) > ID_MAX_LEN) {
     return CommandResult::Invalid;
   }
+  strncpy(lastId_, id, ID_MAX_LEN);
+  lastId_[ID_MAX_LEN] = '\0';
   if (seenRecently(id)) {
     return CommandResult::Duplicate;
   }

@@ -13,6 +13,7 @@ export interface DeviceTopics {
   state: string;
   status: string;
   ota: string;
+  ack: string;
 }
 
 /**
@@ -20,5 +21,5 @@ export interface DeviceTopics {
  */
 export function buildTopics(deviceId: string): DeviceTopics {
   const base = `${MQTT_TOPIC_ROOT}/${deviceId}`;
-  return { cmd: `${base}/cmd`, state: `${base}/state`, status: `${base}/status`, ota: `${base}/ota` };
+  return { cmd: `${base}/cmd`, state: `${base}/state`, status: `${base}/status`, ota: `${base}/ota`, ack: `${base}/ack` };
 }

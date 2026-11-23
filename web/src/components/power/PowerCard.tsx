@@ -1,4 +1,4 @@
-import type { LauncherCommand, LauncherState } from "../../types/launcher";
+import type { LauncherState, SyncKey, SyncPatch } from "../../types/launcher";
 
 /**
  * Props for PowerCard.
@@ -6,7 +6,8 @@ import type { LauncherCommand, LauncherState } from "../../types/launcher";
 interface PowerCardProps {
   state: LauncherState;
   disabled: boolean;
-  send: (command: LauncherCommand) => void;
+  set: (patch: SyncPatch) => void;
+  pending: Set<SyncKey>;
 }
 
 function statusText(state: LauncherState): string {
@@ -18,7 +19,7 @@ function statusText(state: LauncherState): string {
 /**
  * Master on/off switch with run status and shot counter.
  */
-export function PowerCard({ state, disabled, send }: PowerCardProps) {
+export function PowerCard({ state, disabled, set, pending }: PowerCardProps) {
   const on = state.power;
 
   return (
@@ -28,7 +29,7 @@ export function PowerCard({ state, disabled, send }: PowerCardProps) {
         disabled={disabled}
         aria-pressed={on}
         aria-label={on ? "Tắt máy" : "Bật máy"}
-        onClick={() => send({ power: !on })}
+        onClick={() => set({ power: !on })}
         className={`grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 transition-colors disabled:opacity-45 ${
           on ? "border-ink bg-ball text-card" : "border-ink bg-card text-ink"
         }`}
@@ -40,7 +41,9 @@ export function PowerCard({ state, disabled, send }: PowerCardProps) {
       </button>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] text-mute">Nguồn</p>
-        <p className="text-[18px] font-semibold">{statusText(state)}</p>
+        <p className="text-[18px] font-semibold">
+          {pending.has("power") ? (on ? "Đang bật…" : "Đang tắt…") : statusText(state)}
+        </p>
       </div>
       <div className="text-right">
         <p className="text-[13px] text-mute">Đã bắn</p>

@@ -1,5 +1,5 @@
 import { LIMITS } from "../../config/limits";
-import type { LauncherCommand, LauncherState } from "../../types/launcher";
+import type { LauncherState, SyncKey, SyncPatch } from "../../types/launcher";
 import { Panel } from "../ui/Panel";
 import { RangeSlider } from "../ui/RangeSlider";
 
@@ -9,7 +9,8 @@ import { RangeSlider } from "../ui/RangeSlider";
 interface FlywheelPanelProps {
   state: LauncherState;
   disabled: boolean;
-  send: (command: LauncherCommand) => void;
+  set: (patch: SyncPatch) => void;
+  pending: Set<SyncKey>;
 }
 
 const percent = (v: number) => `${v}%`;
@@ -17,7 +18,7 @@ const percent = (v: number) => `${v}%`;
 /**
  * Speed controls for the upper (SB1) and lower (SB2) flywheels plus a linked slider.
  */
-export function FlywheelPanel({ state, disabled, send }: FlywheelPanelProps) {
+export function FlywheelPanel({ state, disabled, set, pending }: FlywheelPanelProps) {
   const linked = state.sb1 === state.sb2 ? state.sb1 : Math.round((state.sb1 + state.sb2) / 2);
   const spin = state.sb1 - state.sb2;
   const spinLabel = spin === 0 ? "Không xoáy" : spin > 0 ? "Xoáy lên" : "Xoáy xuống";
@@ -34,31 +35,34 @@ export function FlywheelPanel({ state, disabled, send }: FlywheelPanelProps) {
     >
       <RangeSlider
         label="SB1 · bánh trên"
-        remote={state.sb1}
+        value={state.sb1}
         min={LIMITS.speed.min}
         max={LIMITS.speed.max}
         disabled={disabled}
         format={percent}
-        onSend={(sb1) => send({ sb1 })}
+        syncing={pending.has("sb1")}
+        onChange={(sb1) => set({ sb1 })}
       />
       <RangeSlider
         label="SB2 · bánh dưới"
-        remote={state.sb2}
+        value={state.sb2}
         min={LIMITS.speed.min}
         max={LIMITS.speed.max}
         disabled={disabled}
         format={percent}
-        onSend={(sb2) => send({ sb2 })}
+        syncing={pending.has("sb2")}
+        onChange={(sb2) => set({ sb2 })}
       />
       <div className="border-t border-dashed border-line pt-4">
         <RangeSlider
           label="Chỉnh chung cả hai"
-          remote={linked}
+          value={linked}
           min={LIMITS.speed.min}
           max={LIMITS.speed.max}
           disabled={disabled}
           format={percent}
-          onSend={(sbAll) => send({ sbAll })}
+          syncing={pending.has("sb1") || pending.has("sb2")}
+          onChange={(sbAll) => set({ sb1: sbAll, sb2: sbAll })}
         />
       </div>
     </Panel>

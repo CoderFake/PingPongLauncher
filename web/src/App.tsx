@@ -16,7 +16,7 @@ import { useLauncher } from "./hooks/useLauncher";
 export default function App() {
   const [deviceId, setDeviceId] = useDeviceId();
   const [editing, setEditing] = useState(false);
-  const { state, deviceOnline, broker, ota, send } = useLauncher(editing ? null : deviceId);
+  const { state, pending, failed, deviceOnline, broker, ota, set, sendOnce } = useLauncher(editing ? null : deviceId);
 
   if (!deviceId || editing) {
     return (
@@ -47,11 +47,16 @@ export default function App() {
         </div>
       ) : (
         <div className="space-y-4">
-          <PowerCard state={state} disabled={disabled} send={send} />
-          <FlywheelPanel state={state} disabled={disabled} send={send} />
-          <TurretPanel state={state} disabled={disabled} send={send} />
-          <FeedPanel state={state} disabled={disabled} send={send} />
-          <FirmwarePanel state={state} ota={ota} disabled={disabled} send={send} />
+          {failed.length > 0 && (
+            <p className="rounded-lg bg-bad/10 px-3 py-2 text-[14px] text-bad">
+              Máy không xác nhận thay đổi sau 3 lần gửi. Kiểm tra máy còn online rồi chỉnh lại.
+            </p>
+          )}
+          <PowerCard state={state} disabled={disabled} set={set} pending={pending} />
+          <FlywheelPanel state={state} disabled={disabled} set={set} pending={pending} />
+          <TurretPanel state={state} disabled={disabled} set={set} pending={pending} />
+          <FeedPanel state={state} disabled={disabled} set={set} pending={pending} />
+          <FirmwarePanel state={state} ota={ota} disabled={disabled} send={sendOnce} />
         </div>
       )}
     </main>

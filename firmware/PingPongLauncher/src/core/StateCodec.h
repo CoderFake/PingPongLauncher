@@ -31,6 +31,11 @@ class StateCodec {
                              OtaRequest& ota);
 
   /**
+   * Returns the id of the last command that carried one (also for duplicates).
+   */
+  const char* lastCommandId() const { return lastId_; }
+
+  /**
    * Writes the full state plus telemetry as a JSON object into `out`.
    */
   size_t serialize(const LauncherState& state, const LauncherTelemetry& telemetry, char* out,
@@ -55,4 +60,5 @@ class StateCodec {
 
   char recentIds_[ID_HISTORY][ID_MAX_LEN + 1] = {};
   uint8_t nextSlot_ = 0;
+  char lastId_[ID_MAX_LEN + 1] = {};
 };

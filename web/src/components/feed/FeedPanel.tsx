@@ -1,5 +1,5 @@
 import { LIMITS } from "../../config/limits";
-import type { LauncherCommand, LauncherState } from "../../types/launcher";
+import type { LauncherState, SyncKey, SyncPatch } from "../../types/launcher";
 import { Panel } from "../ui/Panel";
 import { RangeSlider } from "../ui/RangeSlider";
 
@@ -9,25 +9,27 @@ import { RangeSlider } from "../ui/RangeSlider";
 interface FeedPanelProps {
   state: LauncherState;
   disabled: boolean;
-  send: (command: LauncherCommand) => void;
+  set: (patch: SyncPatch) => void;
+  pending: Set<SyncKey>;
 }
 
 /**
  * Ball feed rate control.
  */
-export function FeedPanel({ state, disabled, send }: FeedPanelProps) {
+export function FeedPanel({ state, disabled, set, pending }: FeedPanelProps) {
   const interval = (60 / state.feed).toFixed(1);
 
   return (
     <Panel title="Tốc độ lên bóng" hint={`Khoảng ${interval} giây một quả.`}>
       <RangeSlider
         label="Số quả mỗi phút"
-        remote={state.feed}
+        value={state.feed}
         min={LIMITS.feed.min}
         max={LIMITS.feed.max}
         disabled={disabled}
         format={(v) => `${v} quả/phút`}
-        onSend={(feed) => send({ feed })}
+        syncing={pending.has("feed")}
+        onChange={(feed) => set({ feed })}
       />
     </Panel>
   );

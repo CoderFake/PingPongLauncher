@@ -12,6 +12,7 @@
  *   <root>/<deviceId>/state   full state, retained
  *   <root>/<deviceId>/status  online/offline via last will, retained
  *   <root>/<deviceId>/ota     firmware update progress, not retained
+ *   <root>/<deviceId>/ack     per-command acknowledgement, not retained
  */
 class MqttLink {
  public:
@@ -32,6 +33,11 @@ class MqttLink {
    * Publishes the retained state document.
    */
   bool publishState(const char* json);
+
+  /**
+   * Publishes a command acknowledgement.
+   */
+  bool publishAck(const char* json);
 
   /**
    * Publishes an OTA progress document.
@@ -58,6 +64,7 @@ class MqttLink {
   String topicState_;
   String topicStatus_;
   String topicOta_;
+  String topicAck_;
   MessageHandler onCommand_;
   ConnectedHandler onConnected_;
   uint32_t lastAttemptMs_ = 0;

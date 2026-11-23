@@ -1,5 +1,5 @@
 import { LIMITS } from "../../config/limits";
-import type { LauncherCommand, LauncherState, TurretMode } from "../../types/launcher";
+import type { LauncherState, TurretMode, SyncKey, SyncPatch } from "../../types/launcher";
 import { Panel } from "../ui/Panel";
 import { RangeSlider } from "../ui/RangeSlider";
 import { SegmentedControl, type SegmentOption } from "../ui/SegmentedControl";
@@ -11,7 +11,8 @@ import { TurretDial } from "./TurretDial";
 interface TurretPanelProps {
   state: LauncherState;
   disabled: boolean;
-  send: (command: LauncherCommand) => void;
+  set: (patch: SyncPatch) => void;
+  pending: Set<SyncKey>;
 }
 
 const MODES: SegmentOption<TurretMode>[] = [
@@ -31,7 +32,7 @@ const signed = (v: number) => (v > 0 ? `+${v}°` : `${v}°`);
 /**
  * Aim mode, sweep range and fixed angle controls.
  */
-export function TurretPanel({ state, disabled, send }: TurretPanelProps) {
+export function TurretPanel({ state, disabled, set, pending }: TurretPanelProps) {
   const fixed = state.mode === "fixed";
 
   return (
@@ -40,28 +41,30 @@ export function TurretPanel({ state, disabled, send }: TurretPanelProps) {
         options={MODES}
         value={state.mode}
         disabled={disabled}
-        onChange={(mode) => send({ mode })}
+        onChange={(mode) => set({ mode })}
       />
       <TurretDial mode={state.mode} range={state.range} angle={state.angle} />
       {fixed ? (
         <RangeSlider
           label="Góc đứng yên"
-          remote={state.angle}
+          value={state.angle}
           min={LIMITS.turretAngle.min}
           max={LIMITS.turretAngle.max}
           disabled={disabled}
           format={signed}
-          onSend={(angle) => send({ angle })}
+          syncing={pending.has("angle")}
+        onChange={(angle) => set({ angle })}
         />
       ) : (
         <RangeSlider
           label="Khoảng góc"
-          remote={state.range}
+          value={state.range}
           min={LIMITS.turretRange.min}
           max={LIMITS.turretRange.max}
           disabled={disabled}
           format={(v) => `±${v}°`}
-          onSend={(range) => send({ range })}
+          syncing={pending.has("range")}
+        onChange={(range) => set({ range })}
         />
       )}
     </Panel>

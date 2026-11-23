@@ -7,6 +7,7 @@
 #include <esp_mac.h>
 
 #include "src/config/AppConfig.h"
+#include "src/core/AckQueue.h"
 #include "src/core/LauncherController.h"
 #include "src/core/LauncherState.h"
 #include "src/core/StateCodec.h"
@@ -19,6 +20,7 @@
 
 LauncherState state;
 StateCodec codec;
+AckQueue acks;
 LauncherController controller;
 WifiController wifi;
 MqttLink mqtt;
@@ -74,6 +76,20 @@ void onCommand(const uint8_t* payload, size_t length) {
       break;
     case CommandResult::NoChange:
       break;
+  }
+  acks.push(codec.lastCommandId(), result, state.rev);
+}
+
+/**
+ * Publishes queued command acknowledgements, oldest first.
+ */
+void flushAcks() {
+  char json[128];
+  while (acks.peek(controller.telemetry().bootId, json, sizeof(json))) {
+    if (!mqtt.publishAck(json)) {
+      return;
+    }
+    acks.pop();
   }
 }
 
@@ -175,6 +191,7 @@ void loop() {
   if (controller.update(now)) {
     publishPending = true;
   }
+  flushAcks();
   flushState(now);
   updateFeedback(now);
   updateStatusLed(now);

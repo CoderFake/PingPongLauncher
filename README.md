@@ -132,6 +132,7 @@ Broker công cộng EMQX: ESP32 dùng `tcp://broker.emqx.io:1883`, web dùng WSS
 | `ppl/<id>/cmd` | web → máy | `{"id":"…","sb1":75}`, QoS 1, không retain |
 | `ppl/<id>/state` | máy → web | Toàn bộ trạng thái kèm `rev`, `boot`, retain |
 | `ppl/<id>/status` | máy → web | `online` / `offline` (LWT), retain |
+| `ppl/<id>/ack` | máy → web | `{id, rev, boot, result}` cho từng lệnh, không retain |
 
 Các khóa lệnh: `power`, `sb1`, `sb2`, `sbAll`, `mode` (`sweep|random|fixed`), `range`, `angle`, `feed`, `get`, `ota` (`{url, sha256, version}`).
 
@@ -139,11 +140,15 @@ Topic `ppl/<id>/ota` (không retain) báo tiến trình cập nhật: `queued`, 
 
 ### Chống trùng lặp và đồng bộ hai chiều
 
-- Mỗi lệnh có `id` ngẫu nhiên. Firmware nhớ 24 id gần nhất và bỏ qua bản gửi lại (QoS 1 có thể giao trùng).
-- Lệnh không làm thay đổi gì thì không tăng `rev` và không publish lại.
-- Firmware gom các thay đổi, publish state tối đa khoảng 12 lần/giây.
-- Thanh trượt gửi tối đa 1 lần mỗi 150ms, không gửi lại giá trị vừa gửi, và giữ giá trị đang kéo cho tới khi máy gửi xác nhận.
-- Web bỏ qua state có `rev` cũ hơn trong cùng một `boot`. Khi máy khởi động lại, `boot` đổi nên web nhận lại từ đầu.
-- Máy là nguồn sự thật duy nhất, nên mọi tab hoặc điện thoại đang mở đều thấy cùng một trạng thái.
+Phía web xử lý bằng `web/src/sync/syncEngine.ts`, phía firmware bằng `AckQueue`.
+
+1. **Máy là nguồn sự thật.** Giá trị bạn vừa chỉnh được lưu riêng như một thay đổi đang chờ và hiển thị đè lên trạng thái máy gửi về. Nhờ vậy thanh trượt không bị nhảy về số cũ khi state cũ đến muộn.
+2. **Gom lệnh.** Mỗi 120ms, các thay đổi chưa gửi được gom thành một lệnh có `id` riêng. Thanh "chỉnh chung" gửi `sb1` và `sb2` trong cùng một lệnh.
+3. **Máy xác nhận.** Với mỗi lệnh nhận được, firmware gửi `ppl/<id>/ack` gồm `{id, rev, boot, result}`, kể cả khi lệnh bị trùng hoặc không làm thay đổi gì.
+4. **Khi nào coi là xong.** Một thay đổi chỉ được coi là đã đồng bộ khi web nhận được ack của đúng `id` đó, **và** sau đó nhận được state có `rev` lớn hơn hoặc bằng `rev` trong ack (cùng `boot`). Lúc đó web chuyển sang hiển thị số của máy.
+5. **Gửi lại.** Sau 2.5 giây không thấy ack, web gửi lại lệnh với **cùng `id`**. Firmware nhận ra trùng `id` nên không áp dụng lần hai, chỉ gửi ack lại. Sau 3 lần mà vẫn không có ack, web bỏ thay đổi đó và hiện cảnh báo.
+6. **Kéo liên tục.** Khi bạn đang kéo thanh trượt, ack và state của các lệnh cũ bị bỏ qua, chỉ giá trị cuối cùng được chờ xác nhận.
+7. **Bỏ state cũ.** State có `rev` nhỏ hơn state mới nhất (cùng `boot`) bị bỏ qua. Khi máy khởi động lại (`boot` đổi), web nhận state mới từ đầu.
+8. **Dấu chấm cam** cạnh giá trị nghĩa là máy chưa xác nhận giá trị đó.
 
 Lưu ý: broker công cộng ai cũng đọc được. Chỉ biết mã thiết bị là gửi lệnh được, nên đừng dùng cho việc gì cần bảo mật.

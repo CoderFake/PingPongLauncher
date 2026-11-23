@@ -1,36 +1,35 @@
 import { useId, type CSSProperties } from "react";
 
-import { useSyncedValue } from "../../hooks/useSyncedValue";
-
 /**
  * Props for RangeSlider.
  */
 interface RangeSliderProps {
   label: string;
-  remote: number;
+  value: number;
   min: number;
   max: number;
   step?: number;
   disabled?: boolean;
+  syncing?: boolean;
   format?: (value: number) => string;
-  onSend: (value: number) => void;
+  onChange: (value: number) => void;
 }
 
 /**
- * Labeled range input synced with a remote value through useSyncedValue.
+ * Controlled range input; `syncing` marks a value the device has not confirmed yet.
  */
 export function RangeSlider({
   label,
-  remote,
+  value,
   min,
   max,
   step = 1,
   disabled = false,
+  syncing = false,
   format = (v) => `${v}`,
-  onSend,
+  onChange,
 }: RangeSliderProps) {
   const id = useId();
-  const { value, change, commit } = useSyncedValue(remote, onSend);
   const pct = ((value - min) / (max - min)) * 100;
 
   return (
@@ -39,7 +38,10 @@ export function RangeSlider({
         <label htmlFor={id} className="text-[14px] text-ink">
           {label}
         </label>
-        <span className="font-mono text-[15px] font-semibold tabular-nums">{format(value)}</span>
+        <span className="flex items-center gap-1.5 font-mono text-[15px] font-semibold tabular-nums">
+          {syncing && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ball" title="Đang chờ máy xác nhận" />}
+          {format(value)}
+        </span>
       </div>
       <input
         id={id}
@@ -51,10 +53,7 @@ export function RangeSlider({
         value={value}
         disabled={disabled}
         style={{ "--pct": `${pct}%` } as CSSProperties}
-        onChange={(e) => change(Number(e.target.value))}
-        onPointerUp={commit}
-        onKeyUp={commit}
-        onBlur={commit}
+        onChange={(e) => onChange(Number(e.target.value))}
       />
     </div>
   );
