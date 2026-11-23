@@ -10,6 +10,7 @@
 namespace {
 
 constexpr size_t CHUNK_SIZE = 2048;
+constexpr uint8_t MAX_REDIRECTS = 5;
 
 /**
  * Returns true when `text` is a 64-character hexadecimal string.
@@ -38,6 +39,45 @@ OtaResult fail(HTTPClient& http, bool updateStarted, const char* code) {
   return {false, code};
 }
 
+/**
+ * Returns true for HTTP status codes that carry a Location to follow.
+ */
+bool isRedirect(int status) {
+  return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
+}
+
+/**
+ * GETs `url`, following redirects by hand. Every hop gets a fresh TLS
+ * connection, because GitHub redirects release downloads to another host and
+ * reusing the github.com socket for it fails. Returns the final HTTP status.
+ */
+int openDownload(HTTPClient& http, NetworkClientSecure& client, String url) {
+  static const char* HEADERS[] = {"Location"};
+  for (uint8_t hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    http.setReuse(false);
+    http.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+    http.setTimeout(AppConfig::OTA_HTTP_TIMEOUT_MS);
+    http.setUserAgent("pingpong-launcher/" FIRMWARE_VERSION);
+    http.collectHeaders(HEADERS, 1);
+    if (!http.begin(client, url)) {
+      return -1;
+    }
+    int status = http.GET();
+    if (!isRedirect(status)) {
+      return status;
+    }
+    String next = http.header("Location");
+    http.end();
+    client.stop();
+    if (next.isEmpty()) {
+      return status;
+    }
+    Serial.printf("[OTA] Redirect %d -> %.60s...\n", status, next.c_str());
+    url = next;
+  }
+  return -2;
+}
+
 }
 
 String OtaUpdater::validate(const OtaRequest& request) {
@@ -64,17 +104,11 @@ OtaResult OtaUpdater::run(const OtaRequest& request, ProgressCallback onProgress
 #endif
 
   HTTPClient http;
-  http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-  http.setTimeout(AppConfig::OTA_HTTP_TIMEOUT_MS);
-  http.setUserAgent("pingpong-launcher/" FIRMWARE_VERSION);
-  if (!http.begin(client, request.url)) {
-    return fail(http, false, "http_begin");
-  }
-
-  int status = http.GET();
+  int status = openDownload(http, client, request.url);
   if (status != HTTP_CODE_OK) {
     Serial.printf("[OTA] HTTP status %d\n", status);
-    return fail(http, false, "http_status");
+    http.end();
+    return {false, String("http_") + status};
   }
 
   int total = http.getSize();

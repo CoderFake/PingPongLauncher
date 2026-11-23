@@ -18,12 +18,20 @@ const OTA_ERRORS: Record<string, string> = {
   url_not_allowed: "Link firmware không thuộc kho được phép.",
   bad_sha256: "Thiếu mã kiểm tra SHA-256.",
   same_version: "Máy đang chạy đúng phiên bản này.",
-  http_status: "Không tải được file firmware.",
   download_timeout: "Tải firmware bị gián đoạn.",
   sha_mismatch: "File tải về không khớp mã kiểm tra, đã hủy.",
   no_space: "Không đủ bộ nhớ. Kiểm tra Partition Scheme.",
   flash_write: "Lỗi ghi bộ nhớ flash.",
 };
+
+/**
+ * Turns a firmware OTA error code into a Vietnamese message.
+ */
+function otaErrorText(code: string | undefined): string {
+  if (code && OTA_ERRORS[code]) return OTA_ERRORS[code];
+  if (code?.startsWith("http_")) return `Không tải được file firmware (mã ${code.slice(5)}).`;
+  return `Cập nhật lỗi: ${code ?? "không rõ"}`;
+}
 
 const RELEASE_ERRORS: Record<string, string> = {
   no_release: "Chưa có bản phát hành nào.",
@@ -91,7 +99,7 @@ export function FirmwarePanel({ state, ota, disabled, send }: FirmwarePanelProps
 
       {ota?.state === "error" && (
         <p className="rounded-lg bg-bad/10 px-3 py-2 text-[14px] text-bad">
-          {OTA_ERRORS[ota.error ?? ""] ?? `Cập nhật lỗi: ${ota.error}`}
+          {otaErrorText(ota.error)}
         </p>
       )}
 
