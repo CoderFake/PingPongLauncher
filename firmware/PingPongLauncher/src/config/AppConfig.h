@@ -18,11 +18,15 @@ constexpr uint8_t PIN_SERVO_FEED = 25;
 constexpr uint8_t PIN_SERVO_TURRET = 26;
 constexpr uint8_t PIN_RESET_BUTTON = 0;
 constexpr uint8_t PIN_STATUS_LED = 2;
+constexpr uint8_t PIN_BUZZER = 27;
+constexpr uint8_t PIN_I2C_SDA = 21;
+constexpr uint8_t PIN_I2C_SCL = 22;
 
 constexpr uint8_t CH_FLYWHEEL_TOP = 0;
 constexpr uint8_t CH_FLYWHEEL_BOTTOM = 1;
 constexpr uint8_t CH_SERVO_FEED = 2;
 constexpr uint8_t CH_SERVO_TURRET = 3;
+constexpr uint8_t CH_BUZZER = 8;
 
 constexpr uint32_t FLYWHEEL_PWM_FREQ = 1000;
 constexpr uint8_t FLYWHEEL_PWM_BITS = 10;
@@ -47,6 +51,15 @@ constexpr uint32_t FEED_STROKE_UP_MS = 350;
 constexpr uint32_t FEED_STROKE_DOWN_MS = 350;
 constexpr uint8_t FEED_RATE_MIN = 10;
 constexpr uint8_t FEED_RATE_MAX = 80;
+
+constexpr bool BUZZER_ACTIVE_LOW = true;
+constexpr uint8_t BUZZER_PWM_BITS = 8;
+
+constexpr uint8_t LCD_ADDRESSES[] = {0x27, 0x3F, 0x26, 0x25, 0x23, 0x20, 0x38};
+constexpr uint32_t LCD_I2C_HZ = 100000;
+constexpr uint32_t LCD_PROBE_INTERVAL_MS = 3000;
+constexpr uint32_t LCD_PAGE_INTERVAL_MS = 3000;
+constexpr uint32_t FEEDBACK_INTERVAL_MS = 100;
 
 constexpr uint8_t DEFAULT_SPEED_TOP = 80;
 constexpr uint8_t DEFAULT_SPEED_BOTTOM = 60;

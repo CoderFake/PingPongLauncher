@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <functional>
+
 #include "../net/MqttLink.h"
 #include "OtaGuard.h"
 #include "OtaUpdater.h"
@@ -12,6 +14,13 @@
  */
 class OtaCoordinator {
  public:
+  using StatusHook = std::function<void(const char* state, int progress, const char* error)>;
+
+  /**
+   * Registers a local observer of OTA progress (LCD, buzzer).
+   */
+  void onStatus(StatusHook hook) { hook_ = hook; }
+
   /**
    * Runs the boot-time rollback check; call first in setup().
    */
@@ -48,6 +57,7 @@ class OtaCoordinator {
   OtaGuard guard_;
   OtaUpdater updater_;
   MqttLink* mqtt_ = nullptr;
+  StatusHook hook_;
   OtaRequest request_;
   bool pending_ = false;
   bool running_ = false;

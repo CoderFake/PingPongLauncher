@@ -21,6 +21,11 @@ class ResetButton {
    */
   void update(uint32_t nowMs);
 
+  /**
+   * Returns how long the button has been held, or 0 when released.
+   */
+  uint32_t heldMs(uint32_t nowMs) const { return pressed_ ? nowMs - pressedSinceMs_ : 0; }
+
  private:
   uint8_t pin_ = 0;
   uint32_t holdMs_ = 0;

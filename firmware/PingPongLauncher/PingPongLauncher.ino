@@ -14,6 +14,7 @@
 #include "src/net/WifiController.h"
 #include "src/ota/LocalOta.h"
 #include "src/ota/OtaCoordinator.h"
+#include "src/ui/Feedback.h"
 
 LauncherState state;
 StateCodec codec;
@@ -23,10 +24,12 @@ MqttLink mqtt;
 ResetButton resetButton;
 OtaCoordinator ota;
 LocalOta localOta;
+Feedback feedback;
 
 String deviceId;
 bool publishPending = false;
 uint32_t lastPublishMs = 0;
+uint32_t lastFeedbackMs = 0;
 
 /**
  * Builds a short, stable device id from the last three MAC bytes.
@@ -100,6 +103,24 @@ void stopForFlashing() {
 }
 
 /**
+ * Samples system state for the LCD and buzzer at a fixed rate.
+ */
+void updateFeedback(uint32_t nowMs) {
+  feedback.tick(nowMs);
+  if (nowMs - lastFeedbackMs < AppConfig::FEEDBACK_INTERVAL_MS) {
+    return;
+  }
+  lastFeedbackMs = nowMs;
+  SystemSnapshot snapshot;
+  snapshot.wifi = wifi.status();
+  snapshot.mqtt = mqtt.connected();
+  snapshot.state = state;
+  snapshot.telemetry = controller.telemetry();
+  snapshot.resetHeldMs = resetButton.heldMs(nowMs);
+  feedback.update(snapshot, nowMs);
+}
+
+/**
  * Drives the status LED: solid when MQTT is up, blinking otherwise.
  */
 void updateStatusLed(uint32_t nowMs) {
@@ -120,14 +141,21 @@ void setup() {
 
   controller.begin();
   controller.apply(state);
+  feedback.begin(deviceId, millis());
 
   resetButton.begin(AppConfig::PIN_RESET_BUTTON, AppConfig::RESET_HOLD_MS,
-                    []() { wifi.resetCredentials(); });
+                    []() {
+                      feedback.onResetConfirmed();
+                      wifi.resetCredentials();
+                    });
   mqtt.begin(deviceId, onCommand, []() {
     publishPending = true;
     ota.markHealthy();
   });
   ota.attach(mqtt);
+  ota.onStatus([](const char* otaState, int progress, const char* error) {
+    feedback.onOta(otaState, progress, error);
+  });
   wifi.begin(deviceId);
 }
 
@@ -146,5 +174,6 @@ void loop() {
     publishPending = true;
   }
   flushState(now);
+  updateFeedback(now);
   updateStatusLed(now);
 }

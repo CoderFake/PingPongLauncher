@@ -65,6 +65,9 @@ void OtaCoordinator::update() {
 }
 
 void OtaCoordinator::report(const char* state, int progress, const char* error) {
+  if (hook_) {
+    hook_(state, progress, error);
+  }
   if (!mqtt_) {
     return;
   }

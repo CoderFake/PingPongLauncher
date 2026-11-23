@@ -6,6 +6,22 @@
 #include "ConfigPortal.h"
 
 /**
+ * WiFi state as seen by the user-facing feedback (LCD, buzzer).
+ */
+enum class WifiState : uint8_t { Connecting, Portal, Joining, JoinFailed, Joined, Online, Lost };
+
+/**
+ * Snapshot of the WiFi link for display purposes.
+ */
+struct WifiStatus {
+  WifiState state;
+  String ssid;
+  String ip;
+  String apSsid;
+  String error;
+};
+
+/**
  * Owns the WiFi lifecycle: boots into STA with saved credentials,
  * falls back to an AP+STA captive portal, then switches to STA only
  * once the chosen network is joined via DHCP.
@@ -26,6 +42,11 @@ class WifiController {
    * Returns true when the station link has an IP address.
    */
   bool isOnline() const;
+
+  /**
+   * Returns the current link state for display.
+   */
+  WifiStatus status() const;
 
   /**
    * Erases saved credentials and reboots into the portal.

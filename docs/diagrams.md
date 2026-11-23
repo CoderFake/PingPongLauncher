@@ -16,7 +16,9 @@ flowchart LR
   S2["MG996R cổ nòng<br/>tụ 470µF"]
   BTN["Nút BOOT"]
   LED["LED onboard"]
-  GND["GND chung: nguồn, 2 buck, ESP32,<br/>VIN− của AOD4184, dây nâu servo"]
+  BZ["Còi MH-FMD<br/>VCC 3.3V"]
+  LCD["LCD 16x2 I2C<br/>VCC 5V, tùy chọn"]
+  GND["GND chung: nguồn, 2 buck, ESP32, VIN− AOD4184,<br/>dây nâu servo, GND còi, GND LCD"]
 
   PSU -->|"12V"| B6
   PSU -->|"12V"| B5
@@ -33,6 +35,8 @@ flowchart LR
   B6 -->|"6V → dây đỏ"| S2
   BTN -->|"GPIO0"| ESP
   ESP -->|"GPIO2"| LED
+  ESP -->|"GPIO27 → I/O"| BZ
+  ESP -->|"GPIO21 SDA, GPIO22 SCL"| LCD
 ```
 
 ## 2. Khởi động và WiFi

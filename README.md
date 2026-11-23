@@ -10,6 +10,7 @@ pingpong-launcher/
 │       ├── hardware/               Flywheel (AOD4184), ServoDriver, Turret, Feeder
 │       ├── net/                    WifiController (AP/STA), ConfigPortal, PortalAssets.h (sinh tự động), MqttLink
 │       ├── ota/                    OtaUpdater (HTTPS + SHA-256), OtaGuard (rollback), OtaCoordinator, LocalOta
+│       ├── ui/                     Lcd1602 (PCF8574, tự dò), Buzzer (giai điệu không chặn), Feedback
 │       ├── storage/                CredentialStore (NVS)
 │       └── input/                  ResetButton (giữ BOOT 3 giây)
 ├── firmware/portal/                index.html, style.css, app.js của trang cài WiFi
@@ -31,6 +32,15 @@ pingpong-launcher/
 | MG996R xoay cổ nòng | 26 | 6V (buck riêng, ≥5A) |
 | Nút reset WiFi | 0 (BOOT) | — |
 | LED trạng thái | 2 | — |
+| Còi MH-FMD (kích mức thấp), chân I/O | 27 | **3.3V** |
+| LCD 16x2 I2C (PCF8574), SDA / SCL | 21 / 22 | 5V (tùy chọn) |
+
+**Còi:** cấp VCC từ chân **3.3V**, không dùng 5V. Module kích bằng transistor PNP: nếu cấp 5V, mức HIGH 3.3V của ESP32 không tắt được transistor nên còi kêu liên tục. Code dùng PWM nên chạy được với cả còi chủ động lẫn còi thụ động.
+
+**LCD:** có thể cắm hoặc không cắm. Firmware tự dò các địa chỉ 0x27, 0x3F… lúc khởi động và dò lại mỗi 3 giây, nên cắm hoặc rút LCD khi máy đang chạy cũng không sao. Một số lưu ý:
+- LCD cần nguồn 5V để đủ sáng.
+- Board I2C phía sau LCD có điện trở kéo lên 5V ở SDA/SCL, mà chân ESP32 không chịu được 5V. Nên gỡ 2 điện trở kéo lên đó, hoặc dùng mạch chuyển mức 3.3V–5V.
+- Nếu màn sáng mà không thấy chữ, vặn biến trở chỉnh độ tương phản ở sau lưng LCD.
 
 Tất cả GND nối chung một điểm. Mỗi servo đặt thêm tụ 470–1000µF, mỗi ZWF-30 đặt tụ 1000µF và diode SS34.
 
@@ -83,6 +93,25 @@ Cơ chế an toàn:
 ### OTA trong mạng LAN, dùng Arduino IDE
 
 Khi máy tính và ESP32 ở chung một mạng WiFi, vào **Tools → Port** sẽ thấy cổng mạng `pingpong-XXXXXX`. Chọn cổng đó rồi bấm Upload như bình thường. Mật khẩu là `pingpong-ota`, đổi trong `AppConfig.h`.
+
+## LCD và còi báo trạng thái
+
+| Tình huống | LCD (tiếng Anh) | Còi |
+|---|---|---|
+| Khởi động | `PingPong Launch` / `v1.0.0  A1B2C3` | 2 nốt lên ngắn |
+| Cần cài WiFi | Hai trang luân phiên: `Setup: join WiFi` / `PingPong-A1B2C3` ↔ `Pass: pingpong` / `Open 192.168.4.1` | 2 tiếng bíp |
+| Đang vào mạng | `Joining WiFi...` / tên mạng | — |
+| Vào mạng thất bại | `WiFi failed` / `Wrong password`… | 1 tiếng trầm dài |
+| Đã vào mạng | `WiFi connected` / IP | 3 nốt đi lên |
+| Kết nối MQTT | `Cloud connecting` / IP → khi xong thì báo bằng còi | 1 tiếng bíp cao |
+| Mất MQTT | — | 2 nốt đi xuống |
+| Máy tắt | `OFF    ID A1B2C3` / `SB 80/60 30/m` ↔ IP | — |
+| Bật nguồn | `Spinning up...` | 1 tiếng bíp |
+| Bánh đà đủ tốc | `FIRING  42` / `SB1 80% SB2 60%` ↔ `Sweep +-25 30/m` | 2 tiếng bíp cao |
+| Tắt nguồn | — | 2 nốt đi xuống |
+| Cập nhật OTA | `Updating fw...` / thanh tiến trình % | Bíp khi bắt đầu, 4 nốt đi lên khi xong |
+| OTA lỗi | `Update failed` / mã lỗi | 2 tiếng trầm |
+| Giữ nút BOOT | `Hold to reset` / `WiFi in 2s...` | Tích mỗi giây, bíp dài khi xóa WiFi |
 
 ## Web
 

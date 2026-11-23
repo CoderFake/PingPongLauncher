@@ -135,6 +135,36 @@ void WifiController::checkPortalAttempt(uint32_t nowMs) {
   setPhase(Phase::Portal);
 }
 
+WifiStatus WifiController::status() const {
+  WifiStatus out{WifiState::Connecting, "", "", apSsid_, lastError_};
+  bool linked = WiFi.status() == WL_CONNECTED;
+  switch (phase_) {
+    case Phase::StaConnecting:
+      out.state = WifiState::Connecting;
+      out.ssid = WiFi.SSID();
+      break;
+    case Phase::Portal:
+      out.state = lastError_.isEmpty() ? WifiState::Portal : WifiState::JoinFailed;
+      out.ssid = pendingSsid_;
+      break;
+    case Phase::PortalConnecting:
+      out.state = WifiState::Joining;
+      out.ssid = pendingSsid_;
+      break;
+    case Phase::PortalSuccess:
+      out.state = WifiState::Joined;
+      break;
+    case Phase::Online:
+      out.state = linked ? WifiState::Online : WifiState::Lost;
+      break;
+  }
+  if (linked) {
+    out.ssid = WiFi.SSID();
+    out.ip = WiFi.localIP().toString();
+  }
+  return out;
+}
+
 String WifiController::statusJson() const {
   JsonDocument doc;
   doc["deviceId"] = deviceId_;
