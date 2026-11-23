@@ -8,20 +8,20 @@ using Note = BuzzerNote;
 
 constexpr uint16_t REST = 0;
 
-constexpr Note BOOT[] = {{1319, 70}, {REST, 30}, {1760, 90}};
-constexpr Note SETUP_NEEDED[] = {{1047, 120}, {REST, 120}, {1047, 120}};
-constexpr Note WIFI_JOINED[] = {{1047, 80}, {1319, 80}, {1568, 140}};
-constexpr Note WIFI_FAILED[] = {{392, 400}};
-constexpr Note CLOUD_ONLINE[] = {{2093, 60}};
-constexpr Note CLOUD_LOST[] = {{523, 120}, {REST, 80}, {392, 160}};
-constexpr Note POWER_ON[] = {{1568, 90}};
-constexpr Note POWER_OFF[] = {{1568, 70}, {1047, 110}};
-constexpr Note READY[] = {{2093, 50}, {REST, 50}, {2093, 50}};
-constexpr Note OTA_START[] = {{1760, 60}, {REST, 40}, {1760, 60}};
-constexpr Note OTA_DONE[] = {{1047, 80}, {1319, 80}, {1568, 80}, {2093, 160}};
-constexpr Note ERROR_TONE[] = {{330, 250}, {REST, 80}, {330, 250}};
-constexpr Note TICK[] = {{2637, 25}};
-constexpr Note RESET_CONFIRM[] = {{2093, 600}};
+constexpr Note BOOT[] = {{2637, 70}, {REST, 30}, {3520, 90}};
+constexpr Note SETUP_NEEDED[] = {{2793, 120}, {REST, 120}, {2793, 120}};
+constexpr Note WIFI_JOINED[] = {{2093, 80}, {2637, 80}, {3136, 140}};
+constexpr Note WIFI_FAILED[] = {{2093, 500}};
+constexpr Note CLOUD_ONLINE[] = {{4186, 60}};
+constexpr Note CLOUD_LOST[] = {{3136, 120}, {REST, 80}, {2349, 160}};
+constexpr Note POWER_ON[] = {{3136, 90}};
+constexpr Note POWER_OFF[] = {{3136, 70}, {2349, 110}};
+constexpr Note READY[] = {{4186, 50}, {REST, 50}, {4186, 50}};
+constexpr Note OTA_START[] = {{3520, 60}, {REST, 40}, {3520, 60}};
+constexpr Note OTA_DONE[] = {{2093, 80}, {2637, 80}, {3136, 80}, {4186, 160}};
+constexpr Note ERROR_TONE[] = {{2093, 250}, {REST, 80}, {2093, 250}, {REST, 80}, {2093, 250}};
+constexpr Note TICK[] = {{4186, 25}};
+constexpr Note RESET_CONFIRM[] = {{2793, 600}};
 
 }
 

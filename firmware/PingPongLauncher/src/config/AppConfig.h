@@ -55,7 +55,7 @@ constexpr uint8_t FEED_RATE_MAX = 80;
 constexpr bool BUZZER_ACTIVE_LOW = true;
 constexpr uint8_t BUZZER_PWM_BITS = 8;
 
-constexpr uint8_t LCD_ADDRESSES[] = {0x27, 0x3F, 0x26, 0x25, 0x23, 0x20, 0x38};
+constexpr uint8_t LCD_ADDRESSES[] = {0x27, 0x3F};
 constexpr uint32_t LCD_I2C_HZ = 100000;
 constexpr uint32_t LCD_PROBE_INTERVAL_MS = 3000;
 constexpr uint32_t LCD_PAGE_INTERVAL_MS = 3000;

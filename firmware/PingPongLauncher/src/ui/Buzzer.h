@@ -31,9 +31,8 @@ struct BuzzerNote {
 };
 
 /**
- * Non-blocking melody player for a low-level-triggered buzzer module
- * (MH-FMD). Tones are generated with PWM, so it works with both active
- * and passive buzzers.
+ * Non-blocking melody player for the MH-FMD passive buzzer module
+ * (low-level trigger, loudest at 2-5 kHz). Tones are generated with PWM.
  */
 class Buzzer {
  public:

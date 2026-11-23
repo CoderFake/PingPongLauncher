@@ -35,9 +35,9 @@ pingpong-launcher/
 | Còi MH-FMD (kích mức thấp), chân I/O | 27 | **3.3V** |
 | LCD 16x2 I2C (PCF8574), SDA / SCL | 21 / 22 | 5V (tùy chọn) |
 
-**Còi:** cấp VCC từ chân **3.3V**, không dùng 5V. Module kích bằng transistor PNP: nếu cấp 5V, mức HIGH 3.3V của ESP32 không tắt được transistor nên còi kêu liên tục. Code dùng PWM nên chạy được với cả còi chủ động lẫn còi thụ động.
+**Còi:** cấp VCC từ chân **3.3V**, không dùng 5V. Module kích bằng transistor PNP: nếu cấp 5V, mức HIGH 3.3V của ESP32 không tắt được transistor nên còi kêu liên tục. Đây là còi thụ động, kêu to nhất ở 2–5kHz, nên mọi giai điệu được đặt trong dải 2–4.2kHz.
 
-**LCD:** có thể cắm hoặc không cắm. Firmware tự dò các địa chỉ 0x27, 0x3F… lúc khởi động và dò lại mỗi 3 giây, nên cắm hoặc rút LCD khi máy đang chạy cũng không sao. Một số lưu ý:
+**LCD:** có thể cắm hoặc không cắm. Firmware dò địa chỉ 0x27 (mặc định của module này), sau đó thử 0x3F. Việc dò chạy lúc khởi động và dò lại mỗi 3 giây, nên cắm hoặc rút LCD khi máy đang chạy cũng không sao. Một số lưu ý:
 - LCD cần nguồn 5V để đủ sáng.
 - Board I2C phía sau LCD có điện trở kéo lên 5V ở SDA/SCL, mà chân ESP32 không chịu được 5V. Nên gỡ 2 điện trở kéo lên đó, hoặc dùng mạch chuyển mức 3.3V–5V.
 - Nếu màn sáng mà không thấy chữ, vặn biến trở chỉnh độ tương phản ở sau lưng LCD.
