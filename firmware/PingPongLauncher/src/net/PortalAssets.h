@@ -203,6 +203,8 @@ var ICON_NEXT = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
 var views = ['pickView', 'joinView', 'waitView', 'doneView'];
 var selected = null;
 var pollTimer = null;
+var lastReplyAt = 0;
+var apName = '';
 function show(view) {
 views.forEach(function (v) { $(v).hidden = v !== view; });
 window.scrollTo(0, 0);
@@ -274,7 +276,8 @@ var password = $('passInput').value;
 if (!ssid) { formError('Nhập tên mạng.'); return; }
 if (password && password.length < 8) { formError('Mật khẩu WiFi tối thiểu 8 ký tự.'); return; }
 $('joinBtn').disabled = true;
-$('waitLead').textContent = 'Máy đang vào mạng “' + ssid + '”. Mất khoảng 5–15 giây.';
+$('waitLead').textContent = 'Máy đang vào mạng “' + ssid + '”. Mất khoảng 5–20 giây.';
+lastReplyAt = Date.now();
 show('waitView');
 var body = new URLSearchParams({ ssid: ssid, password: password });
 fetch('/connect', { method: 'POST', body: body }).catch(function () {});
@@ -282,7 +285,13 @@ clearInterval(pollTimer);
 pollTimer = setInterval(poll, 1000);
 }
 function poll() {
+if (Date.now() - lastReplyAt > 10000) {
+$('waitLead').textContent = 'Điện thoại vừa bị ngắt khỏi ' + (apName || 'điểm phát của máy') +
+' vì máy đang chuyển kênh WiFi. Hãy kết nối lại vào ' + (apName || 'điểm phát đó') +
+' trong 20 giây để xem kết quả, hoặc xem trên màn hình LCD.';
+}
 fetch('/status').then(function (r) { return r.json(); }).then(function (d) {
+lastReplyAt = Date.now();
 if (d.deviceId) { $('deviceChip').textContent = d.deviceId; $('deviceChip').hidden = false; }
 if (d.state === 'connecting') return;
 clearInterval(pollTimer);
@@ -301,6 +310,7 @@ formError(ERRORS[d.error] || 'Không kết nối được. Thử lại nhé.');
 function loadDevice() {
 fetch('/status').then(function (r) { return r.json(); }).then(function (d) {
 if (d.deviceId) { $('deviceChip').textContent = d.deviceId; $('deviceChip').hidden = false; }
+if (d.ap) apName = d.ap;
 }).catch(function () {});
 }
 $('rescan').onclick = function () { scan(true); };

@@ -5,12 +5,47 @@
 
 #include "../config/AppConfig.h"
 
+namespace {
+constexpr uint8_t REASON_AUTH_EXPIRE = 2;
+constexpr uint8_t REASON_4WAY_HANDSHAKE_TIMEOUT = 15;
+constexpr uint8_t REASON_NO_AP_FOUND = 201;
+constexpr uint8_t REASON_AUTH_FAIL = 202;
+constexpr uint8_t REASON_HANDSHAKE_TIMEOUT = 204;
+constexpr uint8_t REASON_NO_AP_COMPATIBLE_SECURITY = 210;
+constexpr uint32_t SCAN_WAIT_MS = 4000;
+constexpr uint32_t RETRY_AFTER_MS = 9000;
+
+/**
+ * Returns true for disconnect reasons that mean the password was rejected.
+ */
+bool isAuthReason(uint8_t reason) {
+  return reason == REASON_AUTH_FAIL || reason == REASON_4WAY_HANDSHAKE_TIMEOUT ||
+         reason == REASON_HANDSHAKE_TIMEOUT || reason == REASON_AUTH_EXPIRE;
+}
+
+/**
+ * Returns true for disconnect reasons that mean the network was not found.
+ */
+bool isNoApReason(uint8_t reason) {
+  return reason == REASON_NO_AP_FOUND || reason == REASON_NO_AP_COMPATIBLE_SECURITY;
+}
+}
+
 void WifiController::begin(const String& deviceId) {
   deviceId_ = deviceId;
   apSsid_ = String(AppConfig::AP_SSID_PREFIX) + deviceId_;
 
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
+  WiFi.onEvent(
+      [this](arduino_event_id_t, arduino_event_info_t info) {
+        uint8_t reason = info.wifi_sta_disconnected.reason;
+        lastReason_ = reason;
+        if (isAuthReason(reason)) {
+          authFailures_ = authFailures_ + 1;
+        }
+      },
+      ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   WiFi.setHostname((String("pingpong-") + deviceId_).c_str());
 
   String ssid;
@@ -100,17 +135,42 @@ void WifiController::requestConnect(const String& ssid, const String& password) 
   pendingSsid_ = ssid;
   pendingPassword_ = password;
   lastError_ = "";
-  Serial.printf("[WiFi] Portal requested '%s'\n", ssid.c_str());
-
-  WiFi.scanDelete();
-  WiFi.disconnect(false, false);
-  WiFi.begin(ssid.c_str(), password.length() ? password.c_str() : nullptr);
+  targetKnown_ = portal_.lookup(ssid, targetChannel_, targetBssid_);
+  attemptStarted_ = false;
+  retried_ = false;
+  Serial.printf("[WiFi] Portal requested '%s' (channel %ld)\n", ssid.c_str(),
+                targetKnown_ ? static_cast<long>(targetChannel_) : -1L);
   setPhase(Phase::PortalConnecting);
 }
 
+void WifiController::startAttempt(bool pinToScannedAp) {
+  lastReason_ = 0;
+  authFailures_ = 0;
+  WiFi.disconnect(false, false);
+  delay(50);
+  const char* password = pendingPassword_.length() ? pendingPassword_.c_str() : nullptr;
+  if (pinToScannedAp) {
+    WiFi.begin(pendingSsid_.c_str(), password, targetChannel_, targetBssid_);
+  } else {
+    WiFi.begin(pendingSsid_.c_str(), password);
+  }
+  attemptStartMs_ = millis();
+}
+
 void WifiController::checkPortalAttempt(uint32_t nowMs) {
-  wl_status_t status = WiFi.status();
-  if (status == WL_CONNECTED) {
+  uint32_t elapsed = nowMs - phaseStartMs_;
+
+  if (!attemptStarted_) {
+    if (WiFi.scanComplete() == WIFI_SCAN_RUNNING && elapsed < SCAN_WAIT_MS) {
+      return;
+    }
+    WiFi.scanDelete();
+    startAttempt(targetKnown_);
+    attemptStarted_ = true;
+    return;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
     store_.save(pendingSsid_, pendingPassword_);
     hasSaved_ = true;
     Serial.printf("[WiFi] Joined '%s', IP %s\n", pendingSsid_.c_str(),
@@ -119,18 +179,24 @@ void WifiController::checkPortalAttempt(uint32_t nowMs) {
     return;
   }
 
-  bool timedOut = nowMs - phaseStartMs_ >= AppConfig::STA_CONNECT_TIMEOUT_MS;
-  if (status == WL_NO_SSID_AVAIL && nowMs - phaseStartMs_ > 5000) {
-    lastError_ = "no_ssid";
-  } else if (status == WL_CONNECT_FAILED) {
-    lastError_ = "auth_failed";
-  } else if (timedOut) {
-    lastError_ = "timeout";
-  } else {
+  uint8_t reason = lastReason_;
+  const char* error = nullptr;
+  if (authFailures_ >= 2) {
+    error = "auth_failed";
+  } else if (!retried_ && (isNoApReason(reason) || nowMs - attemptStartMs_ >= RETRY_AFTER_MS)) {
+    Serial.printf("[WiFi] Retrying without channel lock (last reason %u)\n", reason);
+    retried_ = true;
+    startAttempt(false);
+    return;
+  } else if (elapsed >= AppConfig::STA_CONNECT_TIMEOUT_MS) {
+    error = isNoApReason(reason) ? "no_ssid" : authFailures_ > 0 ? "auth_failed" : "timeout";
+  }
+  if (error == nullptr) {
     return;
   }
 
-  Serial.printf("[WiFi] Join failed: %s\n", lastError_.c_str());
+  lastError_ = error;
+  Serial.printf("[WiFi] Join failed: %s (reason %u)\n", error, reason);
   WiFi.disconnect(false, false);
   setPhase(Phase::Portal);
 }
@@ -168,6 +234,7 @@ WifiStatus WifiController::status() const {
 String WifiController::statusJson() const {
   JsonDocument doc;
   doc["deviceId"] = deviceId_;
+  doc["ap"] = apSsid_;
   switch (phase_) {
     case Phase::PortalConnecting:
       doc["state"] = "connecting";

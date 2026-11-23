@@ -10,6 +10,8 @@
   var views = ['pickView', 'joinView', 'waitView', 'doneView'];
   var selected = null;
   var pollTimer = null;
+  var lastReplyAt = 0;
+  var apName = '';
 
   function show(view) {
     views.forEach(function (v) { $(v).hidden = v !== view; });
@@ -89,7 +91,8 @@
     if (!ssid) { formError('Nhập tên mạng.'); return; }
     if (password && password.length < 8) { formError('Mật khẩu WiFi tối thiểu 8 ký tự.'); return; }
     $('joinBtn').disabled = true;
-    $('waitLead').textContent = 'Máy đang vào mạng “' + ssid + '”. Mất khoảng 5–15 giây.';
+    $('waitLead').textContent = 'Máy đang vào mạng “' + ssid + '”. Mất khoảng 5–20 giây.';
+    lastReplyAt = Date.now();
     show('waitView');
     var body = new URLSearchParams({ ssid: ssid, password: password });
     fetch('/connect', { method: 'POST', body: body }).catch(function () {});
@@ -98,7 +101,13 @@
   }
 
   function poll() {
+    if (Date.now() - lastReplyAt > 10000) {
+      $('waitLead').textContent = 'Điện thoại vừa bị ngắt khỏi ' + (apName || 'điểm phát của máy') +
+        ' vì máy đang chuyển kênh WiFi. Hãy kết nối lại vào ' + (apName || 'điểm phát đó') +
+        ' trong 20 giây để xem kết quả, hoặc xem trên màn hình LCD.';
+    }
     fetch('/status').then(function (r) { return r.json(); }).then(function (d) {
+      lastReplyAt = Date.now();
       if (d.deviceId) { $('deviceChip').textContent = d.deviceId; $('deviceChip').hidden = false; }
       if (d.state === 'connecting') return;
       clearInterval(pollTimer);
@@ -118,6 +127,7 @@
   function loadDevice() {
     fetch('/status').then(function (r) { return r.json(); }).then(function (d) {
       if (d.deviceId) { $('deviceChip').textContent = d.deviceId; $('deviceChip').hidden = false; }
+      if (d.ap) apName = d.ap;
     }).catch(function () {});
   }
 

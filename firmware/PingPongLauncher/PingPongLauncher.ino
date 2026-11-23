@@ -4,6 +4,7 @@
  */
 
 #include <WiFi.h>
+#include <esp_mac.h>
 
 #include "src/config/AppConfig.h"
 #include "src/core/LauncherController.h"
@@ -32,11 +33,12 @@ uint32_t lastPublishMs = 0;
 uint32_t lastFeedbackMs = 0;
 
 /**
- * Builds a short, stable device id from the last three MAC bytes.
+ * Builds a short, stable device id from the last three bytes of the
+ * factory STA MAC in eFuse (valid before the WiFi driver starts).
  */
 String makeDeviceId() {
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
+  uint8_t mac[6] = {};
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char id[7];
   snprintf(id, sizeof(id), "%02X%02X%02X", mac[3], mac[4], mac[5]);
   return String(id);

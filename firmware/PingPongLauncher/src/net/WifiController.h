@@ -60,6 +60,7 @@ class WifiController {
   void finishPortal();
   void requestConnect(const String& ssid, const String& password);
   void checkPortalAttempt(uint32_t nowMs);
+  void startAttempt(bool pinToScannedAp);
   String statusJson() const;
   void setPhase(Phase phase);
 
@@ -73,4 +74,12 @@ class WifiController {
   String lastError_;
   bool hasSaved_ = false;
   uint32_t phaseStartMs_ = 0;
+  uint32_t attemptStartMs_ = 0;
+  bool attemptStarted_ = false;
+  bool retried_ = false;
+  bool targetKnown_ = false;
+  int32_t targetChannel_ = 0;
+  uint8_t targetBssid_[6] = {};
+  volatile uint8_t lastReason_ = 0;
+  volatile uint8_t authFailures_ = 0;
 };

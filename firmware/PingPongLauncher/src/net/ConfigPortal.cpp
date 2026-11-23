@@ -79,6 +79,7 @@ void ConfigPortal::handleScan() {
   JsonDocument doc;
   doc["scanning"] = false;
   JsonArray list = doc["networks"].to<JsonArray>();
+  lastScan_.clear();
 
   for (int16_t i = 0; i < count && list.size() < MAX_NETWORKS; i++) {
     String ssid = WiFi.SSID(i);
@@ -86,6 +87,9 @@ void ConfigPortal::handleScan() {
       continue;
     }
     int32_t rssi = WiFi.RSSI(i);
+    ScanEntry entry{ssid, rssi, WiFi.channel(i), {}};
+    memcpy(entry.bssid, WiFi.BSSID(i), sizeof(entry.bssid));
+    lastScan_.push_back(entry);
     bool duplicate = false;
     for (JsonObject item : list) {
       if (ssid == item["ssid"].as<const char*>()) {
@@ -109,6 +113,21 @@ void ConfigPortal::handleScan() {
   String body;
   serializeJson(doc, body);
   server_.send(200, "application/json", body);
+}
+
+bool ConfigPortal::lookup(const String& ssid, int32_t& channel, uint8_t* bssid) const {
+  const ScanEntry* best = nullptr;
+  for (const ScanEntry& entry : lastScan_) {
+    if (entry.ssid == ssid && (best == nullptr || entry.rssi > best->rssi)) {
+      best = &entry;
+    }
+  }
+  if (best == nullptr) {
+    return false;
+  }
+  channel = best->channel;
+  memcpy(bssid, best->bssid, 6);
+  return true;
 }
 
 void ConfigPortal::handleConnect() {

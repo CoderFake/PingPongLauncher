@@ -5,6 +5,7 @@
 #include <WebServer.h>
 
 #include <functional>
+#include <vector>
 
 /**
  * Captive portal served from the soft AP: lists nearby networks,
@@ -31,6 +32,11 @@ class ConfigPortal {
   void loop();
 
   /**
+   * Finds channel and BSSID of the strongest scanned AP with this SSID.
+   */
+  bool lookup(const String& ssid, int32_t& channel, uint8_t* bssid) const;
+
+  /**
    * Returns true while the portal is serving.
    */
   bool running() const { return running_; }
@@ -43,6 +49,14 @@ class ConfigPortal {
   void handleStatus();
   void handleNotFound();
 
+  struct ScanEntry {
+    String ssid;
+    int32_t rssi;
+    int32_t channel;
+    uint8_t bssid[6];
+  };
+
+  std::vector<ScanEntry> lastScan_;
   WebServer server_{80};
   DNSServer dns_;
   bool running_ = false;

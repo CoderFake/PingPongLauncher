@@ -69,8 +69,8 @@ constexpr uint8_t DEFAULT_FEED_RATE = 30;
 
 constexpr const char* AP_SSID_PREFIX = "PingPong-";
 constexpr const char* AP_PASSWORD = "pingpong";
-constexpr uint32_t STA_CONNECT_TIMEOUT_MS = 15000;
-constexpr uint32_t PORTAL_SWITCH_DELAY_MS = 8000;
+constexpr uint32_t STA_CONNECT_TIMEOUT_MS = 22000;
+constexpr uint32_t PORTAL_SWITCH_DELAY_MS = 20000;
 constexpr uint32_t RESET_HOLD_MS = 3000;
 
 constexpr const char* MQTT_HOST = "broker.emqx.io";
