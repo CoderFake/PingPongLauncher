@@ -196,6 +196,7 @@ var $ = function (id) { return document.getElementById(id); };
 var ERRORS = {
 no_ssid: 'Không thấy mạng này. Kiểm tra lại tên mạng, hoặc mạng là 5GHz (máy chỉ dùng 2.4GHz).',
 auth_failed: 'Sai mật khẩu, hoặc router từ chối kết nối.',
+weak_security: 'Router dùng kiểu bảo mật máy không hỗ trợ. Đổi router sang WPA2-PSK (AES) rồi thử lại.',
 timeout: 'Hết thời gian chờ. Đặt máy gần router hơn rồi thử lại.'
 };
 var ICON_LOCK = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';

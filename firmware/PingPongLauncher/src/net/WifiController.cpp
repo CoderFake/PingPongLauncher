@@ -12,6 +12,7 @@ constexpr uint8_t REASON_NO_AP_FOUND = 201;
 constexpr uint8_t REASON_AUTH_FAIL = 202;
 constexpr uint8_t REASON_HANDSHAKE_TIMEOUT = 204;
 constexpr uint8_t REASON_NO_AP_COMPATIBLE_SECURITY = 210;
+constexpr uint8_t REASON_NO_AP_AUTHMODE_THRESHOLD = 211;
 constexpr uint32_t SCAN_WAIT_MS = 4000;
 constexpr uint32_t RETRY_AFTER_MS = 9000;
 
@@ -29,6 +30,13 @@ bool isAuthReason(uint8_t reason) {
 bool isNoApReason(uint8_t reason) {
   return reason == REASON_NO_AP_FOUND || reason == REASON_NO_AP_COMPATIBLE_SECURITY;
 }
+
+/**
+ * Returns true when the AP was seen but its security is below the accepted minimum.
+ */
+bool isSecurityReason(uint8_t reason) {
+  return reason == REASON_NO_AP_AUTHMODE_THRESHOLD;
+}
 }
 
 void WifiController::begin(const String& deviceId) {
@@ -37,6 +45,7 @@ void WifiController::begin(const String& deviceId) {
 
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
+  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.onEvent(
       [this](arduino_event_id_t, arduino_event_info_t info) {
         uint8_t reason = info.wifi_sta_disconnected.reason;
@@ -189,7 +198,10 @@ void WifiController::checkPortalAttempt(uint32_t nowMs) {
     startAttempt(false);
     return;
   } else if (elapsed >= AppConfig::STA_CONNECT_TIMEOUT_MS) {
-    error = isNoApReason(reason) ? "no_ssid" : authFailures_ > 0 ? "auth_failed" : "timeout";
+    error = isSecurityReason(reason) ? "weak_security"
+            : isNoApReason(reason)   ? "no_ssid"
+            : authFailures_ > 0      ? "auth_failed"
+                                     : "timeout";
   }
   if (error == nullptr) {
     return;

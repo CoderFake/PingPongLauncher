@@ -253,5 +253,6 @@ const char* Feedback::wifiErrorText(const String& code) {
   if (code == "no_ssid") return "No such network";
   if (code == "auth_failed") return "Wrong password";
   if (code == "timeout") return "Timed out";
+  if (code == "weak_security") return "Unsupported auth";
   return "Try again";
 }
