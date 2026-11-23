@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3efe6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161513" media="(prefers-color-scheme: dark)">
+<title>Máy bắn bóng · WiFi</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="brand"><span class="ball" aria-hidden="true"></span>Máy bắn bóng bàn</div>
+    <span class="chip" id="deviceChip" hidden></span>
+  </header>
+
+  <section id="pickView">
+    <h1>Kết nối WiFi</h1>
+    <p class="lead">Chọn mạng nhà bạn. Máy sẽ nhớ cho những lần bật sau.</p>
+
+    <div class="section-head">
+      <span id="scanLabel">Đang tìm mạng…</span>
+      <button class="icon-btn" id="rescan" type="button" aria-label="Quét lại">
+        <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </div>
+
+    <ul class="list" id="list" aria-live="polite">
+      <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
+    </ul>
+
+    <button class="other" id="otherBtn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Mạng khác (ẩn tên)
+    </button>
+  </section>
+
+  <section id="joinView" hidden>
+    <button class="back" id="backBtn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Chọn mạng khác
+    </button>
+    <form id="joinForm" autocomplete="off">
+      <h1 id="joinTitle">Mạng</h1>
+      <p class="lead" id="joinLead"></p>
+      <label class="field" id="ssidField" hidden>
+        <span>Tên mạng</span>
+        <input id="ssidInput" maxlength="32" autocapitalize="none" spellcheck="false">
+      </label>
+      <label class="field" id="passField">
+        <span>Mật khẩu</span>
+        <div class="pw">
+          <input id="passInput" type="password" maxlength="64" autocapitalize="none" spellcheck="false">
+          <button type="button" class="eye" id="eyeBtn" aria-label="Hiện mật khẩu">
+            <svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </label>
+      <p class="error" id="formError" hidden></p>
+      <button class="primary" id="joinBtn" type="submit">Kết nối</button>
+    </form>
+  </section>
+
+  <section id="waitView" hidden>
+    <div class="state">
+      <span class="spinner" aria-hidden="true"></span>
+      <h1>Đang kết nối</h1>
+      <p class="lead" id="waitLead"></p>
+    </div>
+  </section>
+
+  <section id="doneView" hidden>
+    <div class="state">
+      <span class="badge-ok" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      </span>
+      <h1>Đã kết nối</h1>
+      <p class="lead">Ghi lại mã thiết bị để nhập trên trang điều khiển.</p>
+    </div>
+    <div class="code" id="codeBox">
+      <span>Mã thiết bị</span>
+      <strong id="doneId">------</strong>
+    </div>
+    <dl class="facts">
+      <div><dt>Mạng</dt><dd id="doneSsid"></dd></div>
+      <div><dt>Địa chỉ IP</dt><dd id="doneIp"></dd></div>
+    </dl>
+    <p class="note">Điểm phát của máy sẽ tự tắt sau vài giây. Điện thoại sẽ quay lại mạng nhà bạn.</p>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f3efe6;
+  --color-card: #fffdf8;
+  --color-ink: #1c1b19;
+  --color-mute: #77726a;
+  --color-line: #ddd6c8;
+  --color-ball: #f26a1b;
+  --color-table: #1f5a44;
+  --color-bad: #b3341f;
+  --font-sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  @apply bg-paper text-ink font-sans antialiased;
+}
+
+.range {
+  --pct: 50%;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--color-ink) var(--pct), var(--color-line) var(--pct));
+}
+
+.range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--color-ink) var(--pct), var(--color-line) var(--pct));
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--color-ball);
+  border: 3px solid var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-ink);
+}
+
+.range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-ball);
+  border: 3px solid var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-ink);
+}
+
+.range:focus-visible {
+  outline: none;
+}
+
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 1px var(--color-ink), 0 0 0 5px rgb(242 106 27 / 0.25);
+}

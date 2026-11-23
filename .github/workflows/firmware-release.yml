@@ -1,0 +1,51 @@
+name: Firmware release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SKETCH: firmware/PingPongLauncher
+      FQBN: esp32:esp32:esp32:PartitionScheme=min_spiffs
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Install ESP32 core and libraries
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install PubSubClient ArduinoJson
+
+      - name: Embed portal assets
+        run: python3 firmware/tools/build_portal.py
+
+      - name: Compile
+        run: |
+          arduino-cli compile -b "$FQBN" \
+            --build-property "compiler.cpp.extra_flags=-DFIRMWARE_VERSION=\"${{ steps.ver.outputs.version }}\"" \
+            --output-dir build "$SKETCH"
+          cp build/PingPongLauncher.ino.bin "PingPongLauncher-${{ steps.ver.outputs.version }}.bin"
+          cp build/PingPongLauncher.ino.merged.bin "PingPongLauncher-${{ steps.ver.outputs.version }}-full-usb.merged.bin"
+          sha256sum PingPongLauncher-*.bin
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            PingPongLauncher-${{ steps.ver.outputs.version }}.bin
+            PingPongLauncher-${{ steps.ver.outputs.version }}-full-usb.merged.bin
+          generate_release_notes: true
