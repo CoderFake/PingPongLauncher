@@ -26,6 +26,45 @@ void turretText(const LauncherState& state, char* out, size_t size) {
   }
 }
 
+/**
+ * Fills a 16-cell bar proportional to value within [minValue, maxValue].
+ */
+void fillBar(int value, int minValue, int maxValue, char* out) {
+  int span = maxValue - minValue;
+  int filled = span > 0 ? ((value - minValue) * 16 + span / 2) / span : 0;
+  for (int i = 0; i < 16; i++) {
+    out[i] = i < filled ? static_cast<char>(0xFF) : '-';
+  }
+  out[16] = '\0';
+}
+
+/**
+ * Draws a 16-cell scale with a single block at the turret angle; the center is marked.
+ */
+void fillAngle(int angle, char* out) {
+  int limit = AppConfig::TURRET_LIMIT_DEG;
+  int marker = ((angle + limit) * 15 + limit) / (2 * limit);
+  for (int i = 0; i < 16; i++) {
+    out[i] = (i == 7 || i == 8) ? '|' : '-';
+  }
+  out[constrain(marker, 0, 15)] = static_cast<char>(0xFF);
+  out[16] = '\0';
+}
+
+/**
+ * Wire-independent display name of a turret mode.
+ */
+const char* modeName(TurretMode mode) {
+  switch (mode) {
+    case TurretMode::Random:
+      return "Random";
+    case TurretMode::Fixed:
+      return "Fixed";
+    default:
+      return "Sweep";
+  }
+}
+
 }
 
 void Feedback::begin(const String& deviceId, uint32_t nowMs) {
@@ -87,6 +126,14 @@ void Feedback::onResetConfirmed() {
   lcd_.show("WiFi reset", "Rebooting...");
   lcd_.update(millis());
   buzzer_.playBlocking(Sound::ResetConfirm);
+}
+
+void Feedback::onPanel(PanelSound sound) {
+  if (sound == PanelSound::Click) {
+    buzzer_.play(Sound::Tick);
+  } else if (sound == PanelSound::Limit) {
+    buzzer_.play(Sound::Error);
+  }
 }
 
 void Feedback::announce(const SystemSnapshot& now) {
@@ -155,7 +202,16 @@ void Feedback::compose(const SystemSnapshot& snapshot, uint32_t nowMs, char* lin
     return;
   }
 
+  if (snapshot.panel != PanelItem::Home) {
+    composeEdit(snapshot, line1, line2);
+    return;
+  }
+
   const WifiStatus& wifi = snapshot.wifi;
+  if (snapshot.state.power) {
+    composeRunning(snapshot, pageB, line1, line2);
+    return;
+  }
   switch (wifi.state) {
     case WifiState::Connecting:
       strcpy(line1, "Connecting WiFi");
@@ -166,21 +222,16 @@ void Feedback::compose(const SystemSnapshot& snapshot, uint32_t nowMs, char* lin
       snprintf(line2, 24, "%s", wifi.ssid.c_str());
       return;
     case WifiState::JoinFailed:
-      if (!pageB) {
-        strcpy(line1, "WiFi failed");
-        strcpy(line2, wifiErrorText(wifi.error));
-        return;
-      }
-      [[fallthrough]];
+      strcpy(line1, "WiFi failed");
+      strcpy(line2, wifiErrorText(wifi.error));
+      return;
     case WifiState::Portal:
       if (!pageB) {
         strcpy(line1, "Setup: join WiFi");
         snprintf(line2, 24, "%s", wifi.apSsid.c_str());
-      } else {
-        snprintf(line1, 24, "Pass: %s", AppConfig::AP_PASSWORD);
-        strcpy(line2, "Open 192.168.4.1");
+        return;
       }
-      return;
+      break;
     case WifiState::Joined:
       strcpy(line1, "WiFi connected");
       snprintf(line2, 24, "%s", wifi.ip.c_str());
@@ -192,39 +243,81 @@ void Feedback::compose(const SystemSnapshot& snapshot, uint32_t nowMs, char* lin
     case WifiState::Online:
       break;
   }
-
-  if (!snapshot.mqtt) {
-    strcpy(line1, "Cloud connecting");
-    snprintf(line2, 24, "%s", wifi.ip.c_str());
-    return;
-  }
   composeRunning(snapshot, pageB, line1, line2);
 }
 
 void Feedback::composeRunning(const SystemSnapshot& snapshot, bool pageB, char* line1, char* line2) {
   const LauncherState& state = snapshot.state;
+  snprintf(line1, 24, "%-3s %u/%u %u/m", state.power ? "ON" : "OFF", state.speedTop,
+           state.speedBottom, state.feedRate);
+
   char turret[16];
   turretText(state, turret, sizeof(turret));
 
-  if (!state.power) {
-    snprintf(line1, 24, "OFF    ID %s", deviceId_.c_str());
-    if (pageB) {
-      snprintf(line2, 24, "%s", snapshot.wifi.ip.c_str());
+  if (state.power) {
+    if (snapshot.telemetry.ready) {
+      snprintf(line2, 24, "%-10s#%5lu", turret, static_cast<unsigned long>(snapshot.telemetry.shots));
     } else {
-      snprintf(line2, 24, "SB %u/%u %u/m", state.speedTop, state.speedBottom, state.feedRate);
+      strcpy(line2, "Spinning up...");
     }
     return;
   }
-
-  if (snapshot.telemetry.ready) {
-    snprintf(line1, 24, "FIRING %9lu", static_cast<unsigned long>(snapshot.telemetry.shots));
+  if (!pageB) {
+    snprintf(line2, 24, "%s", turret);
+  } else if (snapshot.wifi.state == WifiState::Online) {
+    snprintf(line2, 24, "%s", snapshot.wifi.ip.c_str());
   } else {
-    strcpy(line1, "Spinning up...");
+    strcpy(line2, "Web 192.168.4.1");
   }
-  if (pageB) {
-    snprintf(line2, 24, "%s %u/m", turret, state.feedRate);
-  } else {
-    snprintf(line2, 24, "SB1 %u%% SB2 %u%%", state.speedTop, state.speedBottom);
+}
+
+void Feedback::composeEdit(const SystemSnapshot& snapshot, char* line1, char* line2) {
+  const LauncherState& state = snapshot.state;
+  char value[8];
+
+  switch (snapshot.panel) {
+    case PanelItem::SpeedTop:
+      snprintf(value, sizeof(value), "%u%%", state.speedTop);
+      snprintf(line1, 24, "Top wheel%7s", value);
+      fillBar(state.speedTop, 0, 100, line2);
+      return;
+    case PanelItem::SpeedBottom:
+      snprintf(value, sizeof(value), "%u%%", state.speedBottom);
+      snprintf(line1, 24, "Bottom wheel%4s", value);
+      fillBar(state.speedBottom, 0, 100, line2);
+      return;
+    case PanelItem::SpeedBoth: {
+      uint8_t both = (state.speedTop + state.speedBottom + 1) / 2;
+      snprintf(value, sizeof(value), "%u%%", both);
+      snprintf(line1, 24, "Both wheels%5s", value);
+      fillBar(both, 0, 100, line2);
+      return;
+    }
+    case PanelItem::TurretMode:
+      strcpy(line1, "Turret mode");
+      snprintf(line2, 24, "- %-12s+", modeName(state.turretMode));
+      return;
+    case PanelItem::TurretValue:
+      if (state.turretMode == TurretMode::Fixed) {
+        snprintf(value, sizeof(value), "%+d%c", state.turretAngle, DEGREE);
+        snprintf(line1, 24, "Fixed angle%5s", value);
+        fillAngle(state.turretAngle, line2);
+      } else {
+        snprintf(value, sizeof(value), "+-%u%c", state.turretRange, DEGREE);
+        snprintf(line1, 24, "%-11s%5s", state.turretMode == TurretMode::Random ? "Rand range" : "Sweep range",
+                 value);
+        fillBar(state.turretRange, AppConfig::TURRET_RANGE_MIN, AppConfig::TURRET_LIMIT_DEG, line2);
+      }
+      return;
+    case PanelItem::FeedRate:
+      snprintf(value, sizeof(value), "%u/m", state.feedRate);
+      snprintf(line1, 24, "Feed rate%7s", value);
+      fillBar(state.feedRate, AppConfig::FEED_RATE_MIN, AppConfig::FEED_RATE_MAX, line2);
+      return;
+    default:
+      line1[0] = '\0';
+      line2[0] = '\0';
+      return;
   }
 }
 

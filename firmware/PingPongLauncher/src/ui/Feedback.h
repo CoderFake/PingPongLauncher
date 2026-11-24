@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "../core/LauncherState.h"
+#include "../input/ControlPanel.h"
 #include "../net/WifiController.h"
 #include "Buzzer.h"
 #include "Lcd1602.h"
@@ -16,6 +17,7 @@ struct SystemSnapshot {
   LauncherState state;
   LauncherTelemetry telemetry;
   uint32_t resetHeldMs = 0;
+  PanelItem panel = PanelItem::Home;
 };
 
 /**
@@ -49,10 +51,16 @@ class Feedback {
    */
   void onResetConfirmed();
 
+  /**
+   * Plays the button click or limit sound requested by the control panel.
+   */
+  void onPanel(PanelSound sound);
+
  private:
   void announce(const SystemSnapshot& now);
   void compose(const SystemSnapshot& snapshot, uint32_t nowMs, char* line1, char* line2);
   void composeRunning(const SystemSnapshot& snapshot, bool pageB, char* line1, char* line2);
+  void composeEdit(const SystemSnapshot& snapshot, char* line1, char* line2);
   void composeOta(char* line1, char* line2);
   static const char* wifiErrorText(const String& code);
 

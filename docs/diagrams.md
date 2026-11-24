@@ -4,36 +4,36 @@
 
 ```mermaid
 flowchart LR
-  PSU["Nguồn 12V ≥5A"]
-  B6["Buck XL4015<br/>12V → 6V, ≥5A"]
-  B5["Buck LM2596<br/>12V → 5V"]
+  PSU["Nguồn 5V 20A"]
+  BST["Boost 5V → 12V<br/>≥5A, tụ 470–1000µF đầu ra"]
   ESP["ESP32 DevKit"]
   A1["AOD4184 SB1"]
   A2["AOD4184 SB2"]
   M1["ZWF-30 bánh trên<br/>tụ 1000µF + SS34"]
   M2["ZWF-30 bánh dưới<br/>tụ 1000µF + SS34"]
-  S1["MG996R nâng bóng<br/>tụ 470µF"]
-  S2["MG996R cổ nòng<br/>tụ 470µF"]
+  S1["MG996R nâng bóng<br/>tụ 1000µF"]
+  S2["MG996R cổ nòng<br/>tụ 1000µF"]
+  KEYS["4 nút nhấn<br/>POWER · MENU · − · +<br/>chân kia xuống GND"]
   BTN["Nút BOOT"]
   LED["LED onboard"]
   BZ["Còi thụ động MH-FMD<br/>kích mức thấp, VCC 3.3V"]
   LCD["LCD 16x2 I2C 0x27<br/>VCC 5V, tùy chọn"]
-  GND["GND chung: nguồn, 2 buck, ESP32, VIN− AOD4184,<br/>dây nâu servo, GND còi, GND LCD"]
+  GND["GND chung: nguồn, boost, ESP32, VIN− AOD4184,<br/>dây nâu servo, nút nhấn, GND còi, GND LCD"]
 
-  PSU -->|"12V"| B6
-  PSU -->|"12V"| B5
-  PSU -->|"12V → VIN+"| A1
-  PSU -->|"12V → VIN+"| A2
-  B5 -->|"5V → VIN"| ESP
-  B5 -->|"5V → VCC"| LCD
+  PSU -->|"5V"| BST
+  PSU -->|"5V → VIN"| ESP
+  PSU -->|"5V → dây đỏ"| S1
+  PSU -->|"5V → dây đỏ"| S2
+  PSU -->|"5V → VCC"| LCD
+  BST -->|"12V → VIN+"| A1
+  BST -->|"12V → VIN+"| A2
   ESP -->|"GPIO18 → PWM"| A1
   ESP -->|"GPIO19 → PWM"| A2
   A1 -->|"OUT+ → đỏ+xanh<br/>OUT− → đen+vàng"| M1
   A2 -->|"OUT+ → đỏ+xanh<br/>OUT− → đen+vàng"| M2
   ESP -->|"GPIO25 → dây cam"| S1
   ESP -->|"GPIO26 → dây cam"| S2
-  B6 -->|"6V → dây đỏ"| S1
-  B6 -->|"6V → dây đỏ"| S2
+  KEYS -->|"GPIO32 POWER<br/>GPIO33 MENU<br/>GPIO13 −<br/>GPIO14 +"| ESP
   BTN -->|"GPIO0"| ESP
   ESP -->|"GPIO2"| LED
   ESP -->|"GPIO27 → I/O<br/>3V3 → VCC"| BZ

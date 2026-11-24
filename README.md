@@ -8,13 +8,15 @@ pingpong-launcher/
 │       ├── config/AppConfig.h      Chân, PWM, giới hạn, broker, giá trị mặc định
 │       ├── core/                   LauncherState, StateCodec (JSON + chống trùng), LauncherController
 │       ├── hardware/               Flywheel (AOD4184), ServoDriver, Turret, Feeder
-│       ├── net/                    WifiController (AP/STA), ConfigPortal, PortalAssets.h (sinh tự động), MqttLink
+│       ├── net/                    WifiController (AP/STA), ConfigPortal, PortalAssets.h (sinh tự động), MqttLink,
+│       │                           LocalControl (HTTP API + web nhúng), WebAppAssets.h (sinh tự động)
 │       ├── ota/                    OtaUpdater (HTTPS + SHA-256), OtaGuard (rollback), OtaCoordinator, LocalOta
 │       ├── ui/                     Lcd1602 (PCF8574, tự dò), Buzzer (giai điệu không chặn), Feedback
 │       ├── storage/                CredentialStore (NVS)
-│       └── input/                  ResetButton (giữ BOOT 3 giây)
+│       └── input/                  ResetButton (giữ BOOT 3 giây), Button, ControlPanel (4 nút + menu)
 ├── firmware/portal/                index.html, style.css, app.js của trang cài WiFi
 ├── firmware/tools/build_portal.py  Nhúng portal/* vào PortalAssets.h
+├── firmware/tools/build_webapp.py  Nhúng web/dist-device vào WebAppAssets.h
 ├── .github/workflows/              Build firmware và tạo Release khi đẩy tag v*
 └── web/                            React + Vite + Tailwind v4 + mqtt.js
     └── src/
@@ -26,14 +28,22 @@ pingpong-launcher/
 
 | Thiết bị | GPIO | Nguồn |
 |---|---|---|
-| AOD4184 bánh trên (SB1) | 18 | 12V |
-| AOD4184 bánh dưới (SB2) | 19 | 12V |
-| MG996R nâng bóng | 25 | 6V (buck riêng, ≥5A) |
-| MG996R xoay cổ nòng | 26 | 6V (buck riêng, ≥5A) |
+| AOD4184 bánh trên (SB1) | 18 | 12V từ boost 5→12V |
+| AOD4184 bánh dưới (SB2) | 19 | 12V từ boost 5→12V |
+| MG996R nâng bóng (cam / đỏ / nâu) | 25 | 5V từ nguồn 5V 20A |
+| MG996R xoay cổ nòng (cam / đỏ / nâu) | 26 | 5V từ nguồn 5V 20A |
+| Nút POWER (bật/tắt bắn) | 32 | nối xuống GND |
+| Nút MENU (chọn thông số) | 33 | nối xuống GND |
+| Nút − | 13 | nối xuống GND |
+| Nút + | 14 | nối xuống GND |
 | Nút reset WiFi | 0 (BOOT) | — |
 | LED trạng thái | 2 | — |
 | Còi MH-FMD (kích mức thấp), chân I/O | 27 | **3.3V** |
 | LCD 16x2 I2C (PCF8574), SDA / SCL | 21 / 22 | 5V (tùy chọn) |
+
+**Nguồn:** nguồn 5V 20A cấp cho VIN của ESP32, 2 servo và LCD. Mạch boost 5→12V (≥5A) lấy từ nguồn 5V và cấp riêng cho VIN+ của 2 AOD4184. Không cấp servo từ chân 5V của ESP32 hay từ cổng USB: MG996R kéo 1–2.5A lúc khởi động, làm sụt áp và ESP32 tự reset.
+
+**Nút nhấn:** dùng nút nhấn nhả 2 chân, một chân vào GPIO, chân kia xuống GND. Firmware bật điện trở kéo lên bên trong và tự chống dội, không cần linh kiện ngoài.
 
 **Còi:** cấp VCC từ chân **3.3V**, không dùng 5V. Module kích bằng transistor PNP: nếu cấp 5V, mức HIGH 3.3V của ESP32 không tắt được transistor nên còi kêu liên tục. Đây là còi thụ động, kêu to nhất ở 2–5kHz, nên mọi giai điệu được đặt trong dải 2–4.2kHz.
 
@@ -108,24 +118,60 @@ Cơ chế an toàn:
 
 Khi máy tính và ESP32 ở chung một mạng WiFi, vào **Tools → Port** sẽ thấy cổng mạng `pingpong-XXXXXX`. Chọn cổng đó rồi bấm Upload như bình thường. Mật khẩu là `pingpong-ota`, đổi trong `AppConfig.h`.
 
+## Nút vật lý
+
+| Nút | Thao tác |
+|---|---|
+| POWER | Bấm để bật hoặc tắt bắn, dùng được ở mọi màn hình |
+| MENU | Bấm để chuyển thông số: SB1 → SB2 → Cả hai → Chế độ nòng → Góc quét/góc cố định → Tốc độ lên bóng → màn hình chính. Giữ 1 giây để về màn hình chính |
+| − / + | Chỉnh thông số đang hiện. Giữ để chỉnh liên tục, giữ quá 1.5 giây thì mỗi bước là 5 |
+
+Không bấm gì trong 6 giây thì LCD tự về màn hình chính. Thay đổi từ nút được đưa vào cùng trạng thái như lệnh từ web (tăng `rev`), nên web MQTT và web nội bộ cập nhật ngay.
+
+Màn hình chỉnh thông số:
+
+```
+Top wheel    80%      Sweep range +-25°     Turret mode
+████████████----      ████------------      - Random      +
+```
+
 ## LCD và còi báo trạng thái
 
 | Tình huống | LCD (tiếng Anh) | Còi |
 |---|---|---|
-| Khởi động | `PingPong Launch` / `v1.0.0  A1B2C3` | 2 nốt lên ngắn |
-| Cần cài WiFi | Hai trang luân phiên: `Setup: join WiFi` / `PingPong-A1B2C3` ↔ `Pass: pingpong` / `Open 192.168.4.1` | 2 tiếng bíp |
+| Khởi động | `PingPong Launch` / `v1.2.0   A1B2C3` | 2 nốt lên ngắn |
+| Cần cài WiFi | Luân phiên `Setup: join WiFi` / `PingPong-A1B2C3` ↔ màn hình chính với `Web 192.168.4.1` | 2 tiếng bíp |
 | Đang vào mạng | `Joining WiFi...` / tên mạng | — |
 | Vào mạng thất bại | `WiFi failed` / `Wrong password`… | 1 tiếng trầm dài |
 | Đã vào mạng | `WiFi connected` / IP | 3 nốt đi lên |
-| Kết nối MQTT | `Cloud connecting` / IP → khi xong thì báo bằng còi | 1 tiếng bíp cao |
+| Kết nối MQTT | — | 1 tiếng bíp cao |
 | Mất MQTT | — | 2 nốt đi xuống |
-| Máy tắt | `OFF    ID A1B2C3` / `SB 80/60 30/m` ↔ IP | — |
-| Bật nguồn | `Spinning up...` | 1 tiếng bíp |
-| Bánh đà đủ tốc | `FIRING  42` / `SB1 80% SB2 60%` ↔ `Sweep +-25 30/m` | 2 tiếng bíp cao |
+| Máy tắt | `OFF 80/60 30/m` / `Sweep +-25` ↔ IP | — |
+| Bật nguồn | `ON  80/60 30/m` / `Spinning up...` | 1 tiếng bíp |
+| Bánh đà đủ tốc | `ON  80/60 30/m` / `Sweep +-25#   42` | 2 tiếng bíp cao |
 | Tắt nguồn | — | 2 nốt đi xuống |
+| Bấm nút chỉnh | Màn hình chỉnh thông số, có thanh mức | Tích ngắn; chạm giới hạn thì bíp trầm |
 | Cập nhật OTA | `Updating fw...` / thanh tiến trình % | Bíp khi bắt đầu, 4 nốt đi lên khi xong |
 | OTA lỗi | `Update failed` / mã lỗi | 2 tiếng trầm |
 | Giữ nút BOOT | `Hold to reset` / `WiFi in 2s...` | Tích mỗi giây, bíp dài khi xóa WiFi |
+
+Dòng 1 màn hình chính: nguồn, tốc độ bánh trên/bánh dưới (%), tốc độ lên bóng (quả/phút). Dòng 2: chế độ nòng và số bóng đã bắn.
+
+## Điều khiển trực tiếp (không cần internet)
+
+Firmware chứa sẵn bản web giống hệt bản MQTT, chạy thẳng trên ESP32. Lệnh đi từ điện thoại tới máy qua HTTP, không qua broker, nên không bị ảnh hưởng khi mạng chặn MQTT hoặc broker công cộng chập chờn.
+
+- **Cùng mạng WiFi với máy:** mở `http://<IP của máy>/app/` (IP hiện trên LCD và Serial) hoặc `http://pingpong.local/app/`.
+- **Không có WiFi** (ví dụ ở sân tập): khi không vào được mạng đã lưu, máy phát WiFi `PingPong-XXXXXX` (mật khẩu `pingpong`). Kết nối vào, trên trang cài đặt bấm **Điều khiển trực tiếp**, hoặc mở `http://192.168.4.1/app/`. Điện thoại có thể báo "không có internet", hãy chọn giữ kết nối.
+
+Bản nội bộ dùng cùng cơ chế xác nhận (ack + `rev`) với bản MQTT. Phần cập nhật firmware bị ẩn vì cần internet. Web MQTT, web nội bộ và nút vật lý dùng song song được.
+
+Sau khi sửa code web, sinh lại bản nhúng rồi nạp lại firmware:
+
+```bash
+cd web && npm run build:device && cd ..
+python3 firmware/tools/build_webapp.py
+```
 
 ## Web
 

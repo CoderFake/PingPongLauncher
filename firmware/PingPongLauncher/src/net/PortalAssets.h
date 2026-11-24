@@ -37,6 +37,10 @@ static const char PORTAL_HTML[] PROGMEM = R"PORTAL(<!doctype html>
 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
 Mạng khác (ẩn tên)
 </button>
+<a class="other direct" href="/app/">
+<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+Điều khiển trực tiếp, không cần WiFi
+</a>
 </section>
 <section id="joinView" hidden>
 <button class="back" id="backBtn" type="button">
@@ -158,6 +162,7 @@ h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; lette
 .empty { padding: 26px 16px; text-align: center; color: var(--mute); font-size: 15px; }
 .other { width: 100%; min-height: 52px; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px dashed var(--line); border-radius: var(--radius); background: none; color: var(--ink); font: inherit; font-size: 15px; }
 .other:active { background: var(--sunk); }
+.direct { border-style: solid; text-decoration: none; }
 .back { display: inline-flex; align-items: center; gap: 4px; margin: -6px 0 18px -8px; padding: 8px; border: 0; background: none; color: var(--mute); font: inherit; font-size: 15px; }
 .field { display: block; margin-bottom: 14px; }
 .field > span { display: block; font-size: 13px; color: var(--mute); margin: 0 2px 6px; }

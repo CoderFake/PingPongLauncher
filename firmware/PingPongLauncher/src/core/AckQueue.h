@@ -26,6 +26,11 @@ class AckQueue {
    */
   void pop();
 
+  /**
+   * Returns the wire name of a command result.
+   */
+  static const char* resultName(CommandResult result);
+
  private:
   static constexpr uint8_t CAPACITY = 8;
   static constexpr uint8_t ID_LEN = 24;
@@ -35,8 +40,6 @@ class AckQueue {
     CommandResult result;
     uint32_t rev;
   };
-
-  static const char* resultName(CommandResult result);
 
   Entry entries_[CAPACITY] = {};
   uint8_t head_ = 0;

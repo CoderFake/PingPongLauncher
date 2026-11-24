@@ -53,6 +53,16 @@ class WifiController {
    */
   void resetCredentials();
 
+  /**
+   * Returns true while the setup portal owns port 80 on the soft AP.
+   */
+  bool portalRunning() const { return portal_.running(); }
+
+  /**
+   * Registers extra routes on the setup portal's HTTP server.
+   */
+  void addPortalRoutes(const std::function<void(WebServer&)>& installer) { portal_.addRoutes(installer); }
+
  private:
   enum class Phase : uint8_t { StaConnecting, Portal, PortalConnecting, PortalSuccess, Online };
 

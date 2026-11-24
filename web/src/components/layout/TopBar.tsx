@@ -1,3 +1,4 @@
+import { LOCAL_MODE } from "../../config/transport";
 import type { BrokerStatus } from "../../types/launcher";
 import { StatusDot } from "../ui/StatusDot";
 
@@ -19,6 +20,14 @@ const BROKER_LABEL: Record<BrokerStatus, string> = {
   offline: "Mất mạng",
 };
 
+const LOCAL_LABEL: Record<BrokerStatus, string> = {
+  idle: "Chưa kết nối",
+  connecting: "Đang nối trực tiếp",
+  connected: "Kết nối trực tiếp",
+  reconnecting: "Mất kết nối máy",
+  offline: "Mất kết nối máy",
+};
+
 /**
  * Header with brand, device id and connection indicators.
  */
@@ -35,14 +44,15 @@ export function TopBar({ deviceId, broker, deviceOnline, onChangeDevice }: TopBa
         <button
           type="button"
           onClick={onChangeDevice}
-          className="rounded-md border border-line bg-card px-2.5 py-1 font-mono text-[13px] hover:border-ink"
-          title="Đổi thiết bị"
+          disabled={LOCAL_MODE}
+          className="rounded-md border border-line bg-card px-2.5 py-1 font-mono text-[13px] enabled:hover:border-ink"
+          title={LOCAL_MODE ? "Máy đang điều khiển trực tiếp" : "Đổi thiết bị"}
         >
           {deviceId}
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-        <StatusDot tone={brokerTone} label={BROKER_LABEL[broker]} />
+        <StatusDot tone={brokerTone} label={(LOCAL_MODE ? LOCAL_LABEL : BROKER_LABEL)[broker]} />
         <StatusDot tone={deviceOnline ? "ok" : "off"} label={deviceOnline ? "Máy đang online" : "Máy offline"} />
       </div>
     </header>

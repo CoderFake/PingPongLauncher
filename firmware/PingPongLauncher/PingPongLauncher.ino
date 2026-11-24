@@ -1,8 +1,10 @@
 /**
  * Ping-pong ball launcher firmware for ESP32.
- * WiFi setup via captive portal, control and two-way sync via MQTT.
+ * WiFi setup via captive portal, control and two-way sync via MQTT,
+ * direct control over the local network and physical buttons with LCD.
  */
 
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <esp_mac.h>
 
@@ -11,7 +13,9 @@
 #include "src/core/LauncherController.h"
 #include "src/core/LauncherState.h"
 #include "src/core/StateCodec.h"
+#include "src/input/ControlPanel.h"
 #include "src/input/ResetButton.h"
+#include "src/net/LocalControl.h"
 #include "src/net/MqttLink.h"
 #include "src/net/WifiController.h"
 #include "src/ota/LocalOta.h"
@@ -28,6 +32,8 @@ ResetButton resetButton;
 OtaCoordinator ota;
 LocalOta localOta;
 Feedback feedback;
+ControlPanel panel;
+LocalControl localControl;
 
 String deviceId;
 bool publishPending = false;
@@ -47,11 +53,11 @@ String makeDeviceId() {
 }
 
 /**
- * Handles one command payload received on the cmd topic.
+ * Handles one command payload received on the cmd topic or the local API.
  */
-void onCommand(const uint8_t* payload, size_t length) {
+CommandResult onCommand(const uint8_t* payload, size_t length) {
   if (ota.busy()) {
-    return;
+    return CommandResult::Invalid;
   }
   OtaRequest otaRequest;
   CommandResult result = codec.applyCommand(payload, length, state, otaRequest);
@@ -78,6 +84,67 @@ void onCommand(const uint8_t* payload, size_t length) {
       break;
   }
   acks.push(codec.lastCommandId(), result, state.rev);
+  return result;
+}
+
+/**
+ * Applies a command from the local API and returns its ack JSON, or an empty
+ * string while an OTA update owns the device.
+ */
+String onLocalCommand(const uint8_t* payload, size_t length) {
+  if (ota.busy()) {
+    return String();
+  }
+  CommandResult result = onCommand(payload, length);
+  JsonDocument doc;
+  doc["id"] = codec.lastCommandId();
+  doc["rev"] = state.rev;
+  doc["boot"] = controller.telemetry().bootId;
+  doc["result"] = AckQueue::resultName(result);
+  String json;
+  serializeJson(doc, json);
+  return json;
+}
+
+/**
+ * Serializes the current state for the local API.
+ */
+String localStateJson() {
+  char json[AppConfig::MQTT_BUFFER_SIZE];
+  codec.serialize(state, controller.telemetry(), json, sizeof(json));
+  return String(json);
+}
+
+/**
+ * Describes the device for the local API.
+ */
+String localInfoJson() {
+  JsonDocument doc;
+  doc["id"] = deviceId;
+  doc["fw"] = FIRMWARE_VERSION;
+  String json;
+  serializeJson(doc, json);
+  return json;
+}
+
+/**
+ * Applies button edits like a web command and requests the matching sound.
+ */
+void updatePanel(uint32_t nowMs) {
+  if (ota.busy()) {
+    return;
+  }
+  PanelResult input = panel.update(nowMs, state);
+  if (input.changed) {
+    controller.apply(state);
+    publishPending = true;
+  }
+  if (input.sound != PanelSound::None) {
+    feedback.onPanel(input.sound);
+  }
+  if (input.changed || input.sound != PanelSound::None) {
+    lastFeedbackMs = 0;
+  }
 }
 
 /**
@@ -135,6 +202,7 @@ void updateFeedback(uint32_t nowMs) {
   snapshot.state = state;
   snapshot.telemetry = controller.telemetry();
   snapshot.resetHeldMs = resetButton.heldMs(nowMs);
+  snapshot.panel = panel.item();
   feedback.update(snapshot, nowMs);
 }
 
@@ -170,6 +238,9 @@ void setup() {
     publishPending = true;
     ota.markHealthy();
   });
+  localControl.begin(onLocalCommand, localStateJson, localInfoJson);
+  wifi.addPortalRoutes([](WebServer& server) { localControl.attach(server); });
+  panel.begin();
   ota.attach(mqtt);
   ota.onStatus([](const char* otaState, int progress, const char* error) {
     feedback.onOta(otaState, progress, error);
@@ -182,12 +253,14 @@ void loop() {
 
   resetButton.update(now);
   wifi.update(now);
+  localControl.update(wifi.isOnline() && !wifi.portalRunning());
   if (wifi.isOnline()) {
     mqtt.loop(now);
     localOta.begin(deviceId, stopForFlashing);
     localOta.handle();
   }
   ota.update();
+  updatePanel(now);
   if (controller.update(now)) {
     publishPending = true;
   }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FLUSH_INTERVAL_MS } from "../config/limits";
-import { LauncherMqtt } from "../services/launcherMqtt";
+import { createTransport, type LauncherTransport } from "../services/launcherTransport";
 import { SyncEngine } from "../sync/syncEngine";
 import type {
   BrokerStatus,
@@ -34,7 +34,7 @@ export interface LauncherHandle {
 export function useLauncher(deviceId: string | null): LauncherHandle {
   const [engine0] = useState(() => new SyncEngine());
   const engineRef = useRef(engine0);
-  const serviceRef = useRef<LauncherMqtt | null>(null);
+  const serviceRef = useRef<LauncherTransport | null>(null);
   const [state, setState] = useState<LauncherState | null>(null);
   const [pending, setPending] = useState<Set<SyncKey>>(new Set());
   const [failed, setFailed] = useState<SyncKey[]>([]);
@@ -53,7 +53,7 @@ export function useLauncher(deviceId: string | null): LauncherHandle {
       return;
     }
     const engine = engineRef.current;
-    const service = new LauncherMqtt();
+    const service = createTransport();
     serviceRef.current = service;
     engine.reset();
     render();

@@ -41,6 +41,11 @@ class ConfigPortal {
    */
   bool running() const { return running_; }
 
+  /**
+   * Lets another module register extra routes on the portal's HTTP server.
+   */
+  void addRoutes(const std::function<void(WebServer&)>& installer) { installer(server_); }
+
  private:
   void handleRoot();
   void sendAsset(const char* contentType, const char* body);

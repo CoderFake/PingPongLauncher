@@ -80,6 +80,7 @@ h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; lette
 
 .other { width: 100%; min-height: 52px; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px dashed var(--line); border-radius: var(--radius); background: none; color: var(--ink); font: inherit; font-size: 15px; }
 .other:active { background: var(--sunk); }
+.direct { border-style: solid; text-decoration: none; }
 
 .back { display: inline-flex; align-items: center; gap: 4px; margin: -6px 0 18px -8px; padding: 8px; border: 0; background: none; color: var(--mute); font: inherit; font-size: 15px; }
 

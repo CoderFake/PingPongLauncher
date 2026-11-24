@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { LOCAL_MODE } from "./config/transport";
 import { FeedPanel } from "./components/feed/FeedPanel";
 import { FirmwarePanel } from "./components/firmware/FirmwarePanel";
 import { FlywheelPanel } from "./components/flywheel/FlywheelPanel";
@@ -9,14 +10,23 @@ import { PowerCard } from "./components/power/PowerCard";
 import { TurretPanel } from "./components/turret/TurretPanel";
 import { useDeviceId } from "./hooks/useDeviceId";
 import { useLauncher } from "./hooks/useLauncher";
+import { useLocalDeviceId } from "./hooks/useLocalDeviceId";
 
 /**
  * Root layout: device picker until an id is set, then the control panels.
  */
 export default function App() {
-  const [deviceId, setDeviceId] = useDeviceId();
+  const [storedId, setDeviceId] = useDeviceId();
+  const localId = useLocalDeviceId();
+  const deviceId = LOCAL_MODE ? localId : storedId;
   const [editing, setEditing] = useState(false);
   const { state, pending, failed, deviceOnline, broker, ota, set, sendOnce } = useLauncher(editing ? null : deviceId);
+
+  if (LOCAL_MODE && !deviceId) {
+    return (
+      <main className="mx-auto max-w-[460px] px-4 pt-16 text-center text-mute">Đang kết nối tới máy…</main>
+    );
+  }
 
   if (!deviceId || editing) {
     return (
@@ -56,7 +66,7 @@ export default function App() {
           <FlywheelPanel state={state} disabled={disabled} set={set} pending={pending} />
           <TurretPanel state={state} disabled={disabled} set={set} pending={pending} />
           <FeedPanel state={state} disabled={disabled} set={set} pending={pending} />
-          <FirmwarePanel state={state} ota={ota} disabled={disabled} send={sendOnce} />
+          {!LOCAL_MODE && <FirmwarePanel state={state} ota={ota} disabled={disabled} send={sendOnce} />}
         </div>
       )}
     </main>

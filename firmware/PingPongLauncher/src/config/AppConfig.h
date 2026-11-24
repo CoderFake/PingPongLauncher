@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.1.4"
+#define FIRMWARE_VERSION "1.2.0"
 #endif
 
 /**
@@ -21,6 +21,10 @@ constexpr uint8_t PIN_STATUS_LED = 2;
 constexpr uint8_t PIN_BUZZER = 27;
 constexpr uint8_t PIN_I2C_SDA = 21;
 constexpr uint8_t PIN_I2C_SCL = 22;
+constexpr uint8_t PIN_BTN_POWER = 32;
+constexpr uint8_t PIN_BTN_MENU = 33;
+constexpr uint8_t PIN_BTN_MINUS = 13;
+constexpr uint8_t PIN_BTN_PLUS = 14;
 
 constexpr uint8_t CH_FLYWHEEL_TOP = 0;
 constexpr uint8_t CH_FLYWHEEL_BOTTOM = 1;
@@ -73,6 +77,17 @@ constexpr const char* AP_PASSWORD = "pingpong";
 constexpr uint32_t STA_CONNECT_TIMEOUT_MS = 22000;
 constexpr uint32_t PORTAL_SWITCH_DELAY_MS = 20000;
 constexpr uint32_t RESET_HOLD_MS = 3000;
+
+constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
+constexpr uint32_t BUTTON_REPEAT_DELAY_MS = 450;
+constexpr uint32_t BUTTON_REPEAT_MS = 90;
+constexpr uint32_t BUTTON_LONG_MS = 1000;
+constexpr uint32_t PANEL_IDLE_MS = 6000;
+constexpr uint32_t PANEL_FAST_AFTER_MS = 1500;
+constexpr uint8_t PANEL_FAST_STEP = 5;
+
+constexpr const char* LOCAL_HOSTNAME = "pingpong";
+constexpr uint16_t LOCAL_HTTP_PORT = 80;
 
 constexpr const char* MQTT_HOST = "broker.emqx.io";
 constexpr uint16_t MQTT_PORT = 1883;
