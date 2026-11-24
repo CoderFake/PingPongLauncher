@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.1.1"
+#define FIRMWARE_VERSION "1.1.3"
 #endif
 
 /**

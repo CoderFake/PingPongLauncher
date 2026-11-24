@@ -4,6 +4,7 @@
 #include <NetworkClientSecure.h>
 #include <SHA2Builder.h>
 #include <Update.h>
+#include <WiFi.h>
 
 #include <memory>
 
@@ -13,6 +14,8 @@ namespace {
 
 constexpr size_t CHUNK_SIZE = 2048;
 constexpr uint8_t MAX_REDIRECTS = 5;
+constexpr uint8_t MAX_RESUMES = 4;
+constexpr uint32_t STALL_TIMEOUT_MS = 10000;
 
 /**
  * Returns true when `text` is a 64-character hexadecimal string.
@@ -66,9 +69,12 @@ std::unique_ptr<NetworkClientSecure> makeTlsClient() {
  * GETs `url`, following redirects by hand. Every hop gets a brand-new TLS
  * client, because GitHub redirects release downloads to another host and
  * reusing the github.com connection for it fails. `client` keeps the final
- * connection alive for streaming. Returns the final HTTP status.
+ * connection alive for streaming and `finalUrl` receives the last URL so a
+ * stalled download can be resumed there with a Range request from `offset`.
+ * Returns the final HTTP status.
  */
-int openDownload(HTTPClient& http, std::unique_ptr<NetworkClientSecure>& client, String url) {
+int openDownload(HTTPClient& http, std::unique_ptr<NetworkClientSecure>& client, String url,
+                 String& finalUrl, size_t offset) {
   static const char* HEADERS[] = {"Location"};
   for (uint8_t hop = 0; hop <= MAX_REDIRECTS; hop++) {
     client = makeTlsClient();
@@ -84,6 +90,10 @@ int openDownload(HTTPClient& http, std::unique_ptr<NetworkClientSecure>& client,
     if (!http.begin(*client, url)) {
       return -1;
     }
+    if (offset > 0) {
+      http.addHeader("Range", String("bytes=") + offset + "-");
+    }
+    finalUrl = url;
     int status = http.GET();
     if (status < 0) {
       char tlsError[96] = "";
@@ -123,18 +133,20 @@ String OtaUpdater::validate(const OtaRequest& request) {
 
 OtaResult OtaUpdater::run(const OtaRequest& request, ProgressCallback onProgress) {
   Serial.printf("[OTA] Downloading %s\n", request.url.c_str());
+  WiFi.setSleep(false);
 
   std::unique_ptr<NetworkClientSecure> client;
-
   HTTPClient http;
-  int status = openDownload(http, client, request.url);
+  String assetUrl;
+
+  int status = openDownload(http, client, request.url, assetUrl, 0);
   if (status != HTTP_CODE_OK) {
     Serial.printf("[OTA] HTTP status %d\n", status);
     http.end();
     return {false, String("http_") + status};
   }
 
-  int total = http.getSize();
+  const int total = http.getSize();
   if (total <= 0) {
     return fail(http, false, "no_length");
   }
@@ -145,24 +157,45 @@ OtaResult OtaUpdater::run(const OtaRequest& request, ProgressCallback onProgress
   SHA2Builder sha(32);
   sha.begin();
 
-  NetworkClient* stream = http.getStreamPtr();
   uint8_t buffer[CHUNK_SIZE];
   size_t written = 0;
-  uint32_t lastDataMs = millis();
+  uint8_t resumes = 0;
   int lastReported = -1;
+  int lastLogged = -1;
+  const uint32_t startMs = millis();
+  uint32_t lastDataMs = startMs;
+  NetworkClient* stream = http.getStreamPtr();
 
   while (written < static_cast<size_t>(total)) {
     size_t available = stream->available();
     if (available == 0) {
-      if (!stream->connected() || millis() - lastDataMs > AppConfig::OTA_HTTP_TIMEOUT_MS) {
+      bool stalled = millis() - lastDataMs > STALL_TIMEOUT_MS;
+      if (stream->connected() && !stalled) {
+        delay(2);
+        continue;
+      }
+      if (resumes >= MAX_RESUMES) {
+        Serial.printf("[OTA] Stalled at %u/%d bytes, giving up\n", static_cast<unsigned>(written), total);
         return fail(http, true, "download_timeout");
       }
-      delay(2);
+      resumes++;
+      Serial.printf("[OTA] Stalled at %u/%d bytes (%s), resume %u/%u\n",
+                    static_cast<unsigned>(written), total, stalled ? "no data" : "closed", resumes,
+                    MAX_RESUMES);
+      http.end();
+      status = openDownload(http, client, assetUrl, assetUrl, written);
+      if (status != HTTP_CODE_PARTIAL_CONTENT ||
+          http.getSize() != total - static_cast<int>(written)) {
+        Serial.printf("[OTA] Resume rejected: status %d, size %d\n", status, http.getSize());
+        return fail(http, true, "resume_failed");
+      }
+      stream = http.getStreamPtr();
+      lastDataMs = millis();
       continue;
     }
 
     size_t want = min(min(available, CHUNK_SIZE), static_cast<size_t>(total) - written);
-    int read = stream->readBytes(buffer, want);
+    int read = stream->read(buffer, want);
     if (read <= 0) {
       continue;
     }
@@ -178,6 +211,12 @@ OtaResult OtaUpdater::run(const OtaRequest& request, ProgressCallback onProgress
       lastReported = percent;
       onProgress(percent);
     }
+    if (percent / 10 != lastLogged / 10) {
+      lastLogged = percent;
+      uint32_t elapsed = max<uint32_t>(1, millis() - startMs);
+      Serial.printf("[OTA] %3d%%  %u bytes  %u KB/s\n", percent, static_cast<unsigned>(written),
+                    static_cast<unsigned>(written / elapsed));
+    }
   }
 
   sha.calculate();
@@ -191,7 +230,7 @@ OtaResult OtaUpdater::run(const OtaRequest& request, ProgressCallback onProgress
   }
 
   http.end();
-  Serial.printf("[OTA] Image %s verified (%u bytes)\n", request.version.c_str(),
-                static_cast<unsigned>(written));
+  Serial.printf("[OTA] Image %s verified (%u bytes, %lus)\n", request.version.c_str(),
+                static_cast<unsigned>(written), static_cast<unsigned long>((millis() - startMs) / 1000));
   return {true, ""};
 }

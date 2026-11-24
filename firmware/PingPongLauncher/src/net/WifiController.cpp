@@ -46,6 +46,7 @@ void WifiController::begin(const String& deviceId) {
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
   WiFi.setMinSecurity(WIFI_AUTH_WEP);
+  WiFi.setSleep(false);
   WiFi.onEvent(
       [this](arduino_event_id_t, arduino_event_info_t info) {
         uint8_t reason = info.wifi_sta_disconnected.reason;
