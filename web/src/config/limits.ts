@@ -5,7 +5,7 @@ export const LIMITS = {
   speed: { min: 0, max: 100 },
   turretRange: { min: 5, max: 80 },
   turretAngle: { min: -80, max: 80 },
-  feed: { min: 10, max: 80 },
+  feed: { min: 10, max: 35 },
 } as const;
 
 /**

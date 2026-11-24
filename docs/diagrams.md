@@ -84,7 +84,7 @@ flowchart TD
   RDY -- Rồi --> FIRE["LCD: FIRING 42<br/>🔔 2 bíp cao (lần đầu)"]
   FIRE --> FEED{"Đến nhịp lên bóng?"}
   FEED -- Chưa --> AIM
-  FEED -- Rồi --> SHOT["Piston nâng 350ms, hạ 350ms<br/>quả trên cùng vào bánh đà"]
+  FEED -- Rồi --> SHOT["Piston nâng ~0.7s, hạ ~0.85s (hành trình 2°→178°)<br/>quả trên cùng vào bánh đà"]
   SHOT --> CNT["shots + 1, publish state"]
   CNT --> RND{"mode = random?"}
   RND -- Có --> NEWT["Chọn góc ngẫu nhiên trong ±range"]

@@ -52,6 +52,20 @@ Tất cả GND nối chung một điểm. Mỗi servo đặt thêm tụ 470–10
 4. Bắt buộc chọn **Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA)**. Với phân vùng mặc định, bản build chiếm tới 99% và không cập nhật OTA được. Lần nạp đầu tiên phải qua cáp USB để ghi bảng phân vùng này.
 5. Các thông số cần cân chỉnh theo cơ khí thật nằm trong `AppConfig.h`: `FEED_DOWN_DEG`, `FEED_UP_DEG`, `TURRET_CENTER_DEG`, `TURRET_INVERT`.
 
+### Cân chỉnh servo nâng bóng
+
+Các thông số nằm trong `AppConfig.h`:
+
+| Hằng số | Mặc định | Ý nghĩa |
+|---|---|---|
+| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 2° / 178° | Góc nghỉ và góc đẩy (hành trình 176°) |
+| `SERVO_MS_PER_60DEG` | 200 | Thời gian servo quay 60°. MG996R ở 5V khoảng 190–200ms, ở 6V khoảng 150ms |
+| `FEED_HOLD_UP_MS` | 120 | Thời gian giữ ở đỉnh sau khi đã quay xong |
+| `FEED_SETTLE_DOWN_MS` | 250 | Thời gian chờ quả kế tiếp lăn vào sau khi hạ |
+| `FEED_RATE_MAX` | 35 | Số quả/phút tối đa, để servo luôn quay hết hành trình |
+
+Thời gian đi lên và đi xuống được tính từ góc hành trình và `SERVO_MS_PER_60DEG`, nên piston luôn quay hết góc trước khi đổi chiều. Muốn bắn nhanh hơn 35 quả/phút thì thu hẹp hành trình hoặc cấp 6V cho servo, sau đó tăng `FEED_RATE_MAX` (và sửa `feed.max` trong `web/src/config/limits.ts` cho khớp).
+
 ### Sửa giao diện trang cài WiFi
 
 Chỉ sửa các file trong `firmware/portal/`, sau đó chạy:

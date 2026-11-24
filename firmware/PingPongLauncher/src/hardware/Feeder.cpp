@@ -2,6 +2,21 @@
 
 #include "../config/AppConfig.h"
 
+namespace {
+
+/**
+ * Time the servo needs to sweep from rest to the lift angle at its rated speed.
+ */
+constexpr uint32_t travelMs() {
+  return static_cast<uint32_t>((AppConfig::FEED_UP_DEG - AppConfig::FEED_DOWN_DEG) *
+                               AppConfig::SERVO_MS_PER_60DEG / 60.0f);
+}
+
+constexpr uint32_t LIFT_MS = travelMs() + AppConfig::FEED_HOLD_UP_MS;
+constexpr uint32_t RETURN_MS = travelMs() + AppConfig::FEED_SETTLE_DOWN_MS;
+
+}
+
 void Feeder::begin(uint8_t pin, uint8_t channel) {
   servo_.begin(pin, channel);
   servo_.write(AppConfig::FEED_DOWN_DEG);
@@ -31,14 +46,14 @@ bool Feeder::update(uint32_t nowMs) {
       }
       break;
     case Phase::Lifting:
-      if (nowMs - phaseStartMs_ >= AppConfig::FEED_STROKE_UP_MS) {
+      if (nowMs - phaseStartMs_ >= LIFT_MS) {
         phaseStartMs_ = nowMs;
         phase_ = Phase::Returning;
         servo_.write(AppConfig::FEED_DOWN_DEG);
       }
       break;
     case Phase::Returning:
-      if (nowMs - phaseStartMs_ >= AppConfig::FEED_STROKE_DOWN_MS) {
+      if (nowMs - phaseStartMs_ >= RETURN_MS) {
         phase_ = Phase::Idle;
       }
       break;
@@ -48,6 +63,6 @@ bool Feeder::update(uint32_t nowMs) {
 
 uint32_t Feeder::periodMs() const {
   uint32_t period = 60000UL / rate_;
-  uint32_t minimum = AppConfig::FEED_STROKE_UP_MS + AppConfig::FEED_STROKE_DOWN_MS;
+  uint32_t minimum = LIFT_MS + RETURN_MS;
   return period > minimum ? period : minimum;
 }

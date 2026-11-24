@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.1.3"
+#define FIRMWARE_VERSION "1.1.4"
 #endif
 
 /**
@@ -45,12 +45,13 @@ constexpr bool TURRET_INVERT = false;
 constexpr float TURRET_SWEEP_DEG_PER_SEC = 40.0f;
 constexpr float TURRET_MAX_DEG_PER_SEC = 120.0f;
 
-constexpr float FEED_DOWN_DEG = 10.0f;
-constexpr float FEED_UP_DEG = 150.0f;
-constexpr uint32_t FEED_STROKE_UP_MS = 350;
-constexpr uint32_t FEED_STROKE_DOWN_MS = 350;
+constexpr float FEED_DOWN_DEG = 2.0f;
+constexpr float FEED_UP_DEG = 178.0f;
+constexpr uint32_t SERVO_MS_PER_60DEG = 200;
+constexpr uint32_t FEED_HOLD_UP_MS = 120;
+constexpr uint32_t FEED_SETTLE_DOWN_MS = 250;
 constexpr uint8_t FEED_RATE_MIN = 10;
-constexpr uint8_t FEED_RATE_MAX = 80;
+constexpr uint8_t FEED_RATE_MAX = 35;
 
 constexpr bool BUZZER_ACTIVE_LOW = true;
 constexpr uint8_t BUZZER_PWM_BITS = 8;

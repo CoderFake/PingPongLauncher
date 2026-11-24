@@ -39,6 +39,7 @@ void Turret::update(uint32_t nowMs) {
   if (dt <= 0.0f) {
     return;
   }
+  dt = min(dt, 0.05f);
 
   if (!active_) {
     target_ = 0.0f;
