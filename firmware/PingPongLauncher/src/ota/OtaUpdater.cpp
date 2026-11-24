@@ -5,6 +5,8 @@
 #include <SHA2Builder.h>
 #include <Update.h>
 
+#include <memory>
+
 #include "../config/AppConfig.h"
 
 namespace {
@@ -47,28 +49,54 @@ bool isRedirect(int status) {
 }
 
 /**
- * GETs `url`, following redirects by hand. Every hop gets a fresh TLS
- * connection, because GitHub redirects release downloads to another host and
- * reusing the github.com socket for it fails. Returns the final HTTP status.
+ * Creates a TLS client that verifies servers against the built-in CA bundle.
  */
-int openDownload(HTTPClient& http, NetworkClientSecure& client, String url) {
+std::unique_ptr<NetworkClientSecure> makeTlsClient() {
+  std::unique_ptr<NetworkClientSecure> client(new NetworkClientSecure());
+#if ESP_ARDUINO_VERSION_MAJOR >= 4
+  client->useBuiltinCACertBundle();
+#else
+  client->setInsecure();
+#endif
+  client->setHandshakeTimeout(AppConfig::OTA_HTTP_TIMEOUT_MS / 1000);
+  return client;
+}
+
+/**
+ * GETs `url`, following redirects by hand. Every hop gets a brand-new TLS
+ * client, because GitHub redirects release downloads to another host and
+ * reusing the github.com connection for it fails. `client` keeps the final
+ * connection alive for streaming. Returns the final HTTP status.
+ */
+int openDownload(HTTPClient& http, std::unique_ptr<NetworkClientSecure>& client, String url) {
   static const char* HEADERS[] = {"Location"};
   for (uint8_t hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    client = makeTlsClient();
+    Serial.printf("[OTA] Hop %u, heap %u (max block %u)\n", hop,
+                  static_cast<unsigned>(ESP.getFreeHeap()),
+                  static_cast<unsigned>(ESP.getMaxAllocHeap()));
     http.setReuse(false);
+    http.setConnectTimeout(AppConfig::OTA_HTTP_TIMEOUT_MS);
     http.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
     http.setTimeout(AppConfig::OTA_HTTP_TIMEOUT_MS);
     http.setUserAgent("pingpong-launcher/" FIRMWARE_VERSION);
     http.collectHeaders(HEADERS, 1);
-    if (!http.begin(client, url)) {
+    if (!http.begin(*client, url)) {
       return -1;
     }
     int status = http.GET();
+    if (status < 0) {
+      char tlsError[96] = "";
+      client->lastError(tlsError, sizeof(tlsError));
+      Serial.printf("[OTA] Request failed %d (%s), TLS: %s\n", status,
+                    HTTPClient::errorToString(status).c_str(), tlsError);
+    }
     if (!isRedirect(status)) {
       return status;
     }
     String next = http.header("Location");
     http.end();
-    client.stop();
+    client->stop();
     if (next.isEmpty()) {
       return status;
     }
@@ -96,12 +124,7 @@ String OtaUpdater::validate(const OtaRequest& request) {
 OtaResult OtaUpdater::run(const OtaRequest& request, ProgressCallback onProgress) {
   Serial.printf("[OTA] Downloading %s\n", request.url.c_str());
 
-  NetworkClientSecure client;
-#if ESP_ARDUINO_VERSION_MAJOR >= 4
-  client.useBuiltinCACertBundle();
-#else
-  client.setInsecure();
-#endif
+  std::unique_ptr<NetworkClientSecure> client;
 
   HTTPClient http;
   int status = openDownload(http, client, request.url);
