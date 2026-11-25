@@ -68,13 +68,13 @@ Các thông số nằm trong `AppConfig.h`:
 
 | Hằng số | Mặc định | Ý nghĩa |
 |---|---|---|
-| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 0° / 45° | Góc nghỉ (piston xa nhất, 14.5cm) và góc đẩy |
+| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 0° / 60° | Góc nghỉ (piston xa nhất, 14.5cm) và góc đẩy |
 | `SERVO_MS_PER_60DEG` | 200 | Thời gian servo quay 60°. MG996R ở 5V khoảng 190–200ms, ở 6V khoảng 150ms |
 | `FEED_HOLD_UP_MS` | 120 | Thời gian giữ ở đỉnh sau khi đã quay xong |
 | `FEED_SETTLE_DOWN_MS` | 250 | Thời gian chờ quả kế tiếp lăn vào sau khi hạ |
 | `FEED_RATE_MAX` | 35 | Số quả/phút tối đa, để servo luôn quay hết hành trình |
 
-Cơ cấu tay quay: tay servo 6.5cm, thanh nối 8.5cm, servo đặt thẳng hàng với piston. Lắp tay servo khi servo đang ở góc nghỉ 0°: tay lệch 17° so với đường đi của piston, khoảng cách trục servo đến chốt piston 14.5cm, và đặt về phía mà servo quay tiếp thì piston lùi về servo. Tính từ góc nghỉ, piston chạm thân servo ở khoảng 52–55°, nên `FEED_UP_DEG` bắt đầu từ 45° rồi tăng dần, giữ dưới 50°.
+Cơ cấu tay quay: tay servo 6.5cm, thanh nối 8.5cm, servo đặt thẳng hàng với piston. Lắp tay servo khi servo đang ở góc nghỉ 0°: tay lệch 17° so với đường đi của piston, khoảng cách trục servo đến chốt piston 14.5cm, và đặt về phía mà servo quay tiếp thì piston lùi về servo. Tính từ góc nghỉ, piston chạm thân servo ở khoảng 52–55°, `FEED_UP_DEG` đang đặt 60°, kiểm tra kỹ khe hở với thân servo.
 
 | Góc servo | Trục → chốt piston | Piston đã đi |
 |---|---|---|
