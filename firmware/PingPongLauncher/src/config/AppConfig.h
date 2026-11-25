@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.2.7"
+#define FIRMWARE_VERSION "1.2.8"
 #endif
 
 /**
@@ -62,7 +62,7 @@ constexpr uint32_t FEED_SETTLE_DOWN_MS = 250;
 constexpr uint8_t FEED_RATE_MIN = 10;
 constexpr uint8_t FEED_RATE_MAX = 35;
 
-constexpr bool BUZZER_ACTIVE_LOW = true;
+constexpr bool BUZZER_ACTIVE_LOW = false;
 constexpr uint8_t BUZZER_PWM_BITS = 8;
 
 constexpr uint8_t LCD_ADDRESSES[] = {0x27, 0x3F};

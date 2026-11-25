@@ -16,7 +16,7 @@ flowchart LR
   KEYS["4 nút nhấn<br/>POWER · MENU · − · +<br/>chân kia xuống GND"]
   BTN["Nút BOOT"]
   LED["LED onboard"]
-  BZ["Còi thụ động MH-FMD<br/>kích mức thấp, VCC 3.3V"]
+  BZ["Còi 2 chân 5V<br/>qua S8050 + 1kΩ"]
   LCD["LCD 16x2 I2C 0x27<br/>VCC 5V, tùy chọn"]
   GND["GND chung: nguồn, boost, ESP32, VIN− AOD4184,<br/>dây nâu servo, nút nhấn, GND còi, GND LCD"]
 
@@ -38,7 +38,7 @@ flowchart LR
   KEYS -->|"GPIO32 POWER<br/>GPIO33 MENU<br/>GPIO13 −<br/>GPIO14 +"| ESP
   BTN -->|"GPIO0"| ESP
   ESP -->|"GPIO2"| LED
-  ESP -->|"GPIO27 → I/O<br/>3V3 → VCC"| BZ
+  ESP -->|"GPIO27 → 1kΩ → B S8050<br/>C → còi −, còi + → 5V"| BZ
   ESP -->|"GPIO21 → SDA<br/>GPIO22 → SCL"| LCD
 ```
 
