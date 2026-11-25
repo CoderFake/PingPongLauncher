@@ -1,5 +1,7 @@
 #include "Feedback.h"
 
+#include "../core/LauncherController.h"
+
 #include "../config/AppConfig.h"
 
 namespace {
@@ -257,6 +259,11 @@ void Feedback::composeRunning(const SystemSnapshot& snapshot, bool pageB, char* 
   if (state.power) {
     if (snapshot.telemetry.ready) {
       snprintf(line2, 24, "%-10s#%5lu", turret, static_cast<unsigned long>(snapshot.telemetry.shots));
+    } else if (snapshot.telemetry.wheelFault != 0) {
+      uint8_t fault = snapshot.telemetry.wheelFault;
+      snprintf(line2, 24, "No PWM: %s", fault == LauncherController::FAULT_TOP      ? "top"
+                                        : fault == LauncherController::FAULT_BOTTOM ? "bottom"
+                                                                                    : "both");
     } else {
       strcpy(line2, "Spinning up...");
     }

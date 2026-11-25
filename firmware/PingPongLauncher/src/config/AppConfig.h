@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.2.4"
+#define FIRMWARE_VERSION "1.2.5"
 #endif
 
 /**
@@ -14,6 +14,8 @@ namespace AppConfig {
 
 constexpr uint8_t PIN_FLYWHEEL_TOP = 18;
 constexpr uint8_t PIN_FLYWHEEL_BOTTOM = 19;
+constexpr uint8_t PIN_FLYWHEEL_TOP_SENSE = 16;
+constexpr uint8_t PIN_FLYWHEEL_BOTTOM_SENSE = 17;
 constexpr uint8_t PIN_SERVO_FEED = 25;
 constexpr uint8_t PIN_SERVO_TURRET = 26;
 constexpr uint8_t PIN_RESET_BUTTON = 0;
@@ -37,6 +39,8 @@ constexpr uint8_t FLYWHEEL_PWM_BITS = 10;
 constexpr uint8_t FLYWHEEL_RAMP_STEP = 2;
 constexpr uint32_t FLYWHEEL_RAMP_INTERVAL_MS = 20;
 constexpr uint32_t FLYWHEEL_SETTLE_MS = 1500;
+constexpr bool FLYWHEEL_SENSE_ENABLED = true;
+constexpr uint32_t FLYWHEEL_SENSE_WINDOW_MS = 100;
 
 constexpr uint32_t SERVO_PWM_FREQ = 50;
 constexpr uint8_t SERVO_PWM_BITS = 16;

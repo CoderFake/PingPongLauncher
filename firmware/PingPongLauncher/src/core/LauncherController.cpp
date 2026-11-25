@@ -7,13 +7,17 @@ void LauncherController::begin() {
   bottom_.begin(AppConfig::PIN_FLYWHEEL_BOTTOM, AppConfig::CH_FLYWHEEL_BOTTOM);
   feeder_.begin(AppConfig::PIN_SERVO_FEED, AppConfig::CH_SERVO_FEED);
   turret_.begin(AppConfig::PIN_SERVO_TURRET, AppConfig::CH_SERVO_TURRET);
+  if (AppConfig::FLYWHEEL_SENSE_ENABLED) {
+    topSense_.begin(AppConfig::PIN_FLYWHEEL_TOP_SENSE);
+    bottomSense_.begin(AppConfig::PIN_FLYWHEEL_BOTTOM_SENSE);
+  }
   randomSeed(esp_random());
   telemetry_.bootId = esp_random();
 }
 
 void LauncherController::apply(const LauncherState& state) {
   power_ = state.power;
-  wheelsRequested_ = state.power && (state.speedTop > 0 || state.speedBottom > 0);
+  wheelsRequested_ = state.power && state.speedTop > 0 && state.speedBottom > 0;
 
   uint8_t topTarget = state.power ? state.speedTop : 0;
   uint8_t bottomTarget = state.power ? state.speedBottom : 0;
@@ -43,8 +47,20 @@ bool LauncherController::update(uint32_t nowMs) {
   bottom_.update(nowMs);
   turret_.update(nowMs);
 
+  uint8_t fault = 0;
+  if (AppConfig::FLYWHEEL_SENSE_ENABLED) {
+    topSense_.update(nowMs);
+    bottomSense_.update(nowMs);
+    if (wheelsRequested_ && !topSense_.present(nowMs)) {
+      fault |= FAULT_TOP;
+    }
+    if (wheelsRequested_ && !bottomSense_.present(nowMs)) {
+      fault |= FAULT_BOTTOM;
+    }
+  }
+
   bool wheelsReady = false;
-  if (wheelsRequested_ && top_.atTarget() && bottom_.atTarget()) {
+  if (wheelsRequested_ && fault == 0 && top_.atTarget() && bottom_.atTarget()) {
     if (!settling_) {
       settling_ = true;
       settledSinceMs_ = nowMs;
@@ -58,6 +74,16 @@ bool LauncherController::update(uint32_t nowMs) {
   feeder_.setEnabled(ready);
 
   bool changed = false;
+  if (fault != telemetry_.wheelFault) {
+    telemetry_.wheelFault = fault;
+    changed = true;
+    if (fault != 0) {
+      Serial.printf("[Launcher] Feeding blocked, no PWM on%s%s\n", (fault & FAULT_TOP) ? " top" : "",
+                    (fault & FAULT_BOTTOM) ? " bottom" : "");
+    } else {
+      Serial.println("[Launcher] Flywheel PWM lines OK");
+    }
+  }
   if (ready != telemetry_.ready) {
     telemetry_.ready = ready;
     changed = true;

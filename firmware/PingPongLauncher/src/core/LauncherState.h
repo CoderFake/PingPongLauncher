@@ -29,6 +29,7 @@ struct LauncherState {
  */
 struct LauncherTelemetry {
   bool ready = false;
+  uint8_t wheelFault = 0;
   uint32_t shots = 0;
   uint32_t bootId = 0;
 };

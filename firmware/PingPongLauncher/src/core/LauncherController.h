@@ -4,12 +4,14 @@
 
 #include "../hardware/Feeder.h"
 #include "../hardware/Flywheel.h"
+#include "../hardware/PwmSense.h"
 #include "../hardware/Turret.h"
 #include "LauncherState.h"
 
 /**
  * Drives flywheels, turret and feeder from the current LauncherState.
- * Feeding only starts after both flywheels reached speed and settled.
+ * Feeding only starts when both flywheels are requested, their PWM lines are
+ * confirmed by the read-back pins, and both reached speed and settled.
  */
 class LauncherController {
  public:
@@ -34,6 +36,12 @@ class LauncherController {
   bool update(uint32_t nowMs);
 
   /**
+   * Bit flags for wheel faults in LauncherTelemetry::wheelFault.
+   */
+  static constexpr uint8_t FAULT_TOP = 1;
+  static constexpr uint8_t FAULT_BOTTOM = 2;
+
+  /**
    * Returns the latest telemetry snapshot.
    */
   const LauncherTelemetry& telemetry() const { return telemetry_; }
@@ -43,6 +51,8 @@ class LauncherController {
   Flywheel bottom_;
   Turret turret_;
   Feeder feeder_;
+  PwmSense topSense_;
+  PwmSense bottomSense_;
   LauncherTelemetry telemetry_;
   bool power_ = false;
   bool wheelsRequested_ = false;

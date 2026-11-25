@@ -29,6 +29,8 @@ flowchart LR
   BST -->|"12V → VIN+"| A2
   ESP -->|"GPIO18 → PWM"| A1
   ESP -->|"GPIO19 → PWM"| A2
+  A1 -.->|"chân PWM → GPIO16<br/>(đọc lại)"| ESP
+  A2 -.->|"chân PWM → GPIO17<br/>(đọc lại)"| ESP
   A1 -->|"OUT+ → đỏ+xanh<br/>OUT− → đen+vàng"| M1
   A2 -->|"OUT+ → đỏ+xanh<br/>OUT− → đen+vàng"| M2
   ESP -->|"GPIO25 → dây cam"| S1
