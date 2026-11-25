@@ -68,22 +68,13 @@ Các thông số nằm trong `AppConfig.h`:
 
 | Hằng số | Mặc định | Ý nghĩa |
 |---|---|---|
-| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 0° / 60° | Góc nghỉ (piston xa nhất, 15cm) và góc đẩy |
+| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 0° / 170° | Góc nghỉ và góc đẩy |
 | `SERVO_MS_PER_60DEG` | 200 | Thời gian servo quay 60°. MG996R ở 5V khoảng 190–200ms, ở 6V khoảng 150ms |
 | `FEED_HOLD_UP_MS` | 120 | Thời gian giữ ở đỉnh sau khi đã quay xong |
 | `FEED_SETTLE_DOWN_MS` | 250 | Thời gian chờ quả kế tiếp lăn vào sau khi hạ |
 | `FEED_RATE_MAX` | 35 | Số quả/phút tối đa, để servo luôn quay hết hành trình |
 
-Cơ cấu tay quay: tay servo 6.5cm, thanh nối 8.5cm, servo đặt thẳng hàng với piston. Lắp tay servo khi servo đang ở góc nghỉ 0°: tay servo chĩa thẳng về phía piston, nằm trên đường đi của piston, khoảng cách trục servo đến chốt piston 15cm (mở tối đa). Quay sang phía nào cũng được vì hai phía đối xứng. Piston chạm thân servo ở khoảng 69–72°, `FEED_UP_DEG` đang đặt 60°.
-
-| Góc servo | Trục → chốt piston | Piston đã đi | Khe hở tới thân servo |
-|---|---|---|---|
-| 0° | 15.0cm | 0 | 7.2cm |
-| 30° | 13.5cm | 1.5cm | 5.7cm |
-| 45° | 11.7cm | 3.3cm | 3.9cm |
-| 60° | 9.6cm | 5.4cm | 1.8cm |
-| 65° | 8.9cm | 6.1cm | 1.1cm |
-| 69° | 8.3cm | 6.7cm | 0.5cm |
+Cơ cấu tay quay: tay servo 10cm, thanh nối 10cm. Servo đi từ góc nghỉ 0° tới góc đẩy 170°; thời gian đi và về được tính theo hành trình (khoảng 0.6 giây mỗi chiều), nên tốc độ lên bóng tối đa khoảng 40 quả/phút. Lắp tay servo khi servo đang ở góc nghỉ 0°. Với hai thanh dài bằng nhau đặt thẳng hàng, khoảng cách trục servo đến chốt piston là 20 × cos(góc tay quay), thanh nối nghiêng đúng bằng góc tay quay. Vì vậy phải đặt servo sao cho piston và thân servo không nằm trên đường quét của nhau trong cả hành trình 170°.
 
 Thời gian đi lên và đi xuống được tính từ góc hành trình và `SERVO_MS_PER_60DEG`, nên piston luôn quay hết góc trước khi đổi chiều. Muốn bắn nhanh hơn 35 quả/phút thì thu hẹp hành trình hoặc cấp 6V cho servo, sau đó tăng `FEED_RATE_MAX` (và sửa `feed.max` trong `web/src/config/limits.ts` cho khớp).
 
