@@ -49,4 +49,5 @@ class Turret {
   float target_ = 0.0f;
   int8_t sweepDirection_ = 1;
   uint32_t lastUpdateMs_ = 0;
+  uint32_t lastPickMs_ = 0;
 };

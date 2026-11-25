@@ -24,7 +24,11 @@ void Turret::configure(TurretMode mode, uint8_t range, int8_t fixedAngle) {
 }
 
 void Turret::setActive(bool active) {
+  bool starting = active && !active_;
   active_ = active;
+  if (starting && mode_ == TurretMode::Random) {
+    pickRandomTarget();
+  }
 }
 
 void Turret::onShot() {
@@ -58,7 +62,7 @@ void Turret::update(uint32_t nowMs) {
         sweepDirection_ = 1;
       }
     }
-  } else if (fabsf(target_) > range_) {
+  } else if (fabsf(target_) > range_ || nowMs - lastPickMs_ >= AppConfig::TURRET_RANDOM_HOLD_MS) {
     pickRandomTarget();
   }
 
@@ -70,7 +74,13 @@ void Turret::update(uint32_t nowMs) {
 
 void Turret::pickRandomTarget() {
   int span = static_cast<int>(range_);
-  target_ = static_cast<float>(random(-span, span + 1));
+  float minJump = range_ * 0.4f;
+  float next = position_;
+  for (uint8_t attempt = 0; attempt < 6 && fabsf(next - position_) < minJump; attempt++) {
+    next = static_cast<float>(random(-span, span + 1));
+  }
+  target_ = next;
+  lastPickMs_ = millis();
 }
 
 void Turret::writeRelative(float relativeDeg) {
