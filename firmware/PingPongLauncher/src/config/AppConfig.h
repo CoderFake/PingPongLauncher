@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.2.3"
+#define FIRMWARE_VERSION "1.2.4"
 #endif
 
 /**
@@ -50,8 +50,8 @@ constexpr float TURRET_SWEEP_DEG_PER_SEC = 40.0f;
 constexpr float TURRET_MAX_DEG_PER_SEC = 120.0f;
 
 constexpr float FEED_DOWN_DEG = 0.0f;
-constexpr float FEED_UP_DEG = 170.0f;
-constexpr uint32_t SERVO_MS_PER_60DEG = 200;
+constexpr float FEED_UP_DEG = 180.0f;
+constexpr uint32_t SERVO_MS_PER_60DEG = 300;
 constexpr uint32_t FEED_HOLD_UP_MS = 120;
 constexpr uint32_t FEED_SETTLE_DOWN_MS = 250;
 constexpr uint8_t FEED_RATE_MIN = 10;
