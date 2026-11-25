@@ -70,6 +70,7 @@ class WifiController {
   void finishPortal();
   void requestConnect(const String& ssid, const String& password);
   void checkPortalAttempt(uint32_t nowMs);
+  void retrySavedNetwork(uint32_t nowMs);
   void startAttempt(bool pinToScannedAp);
   String statusJson() const;
   void setPhase(Phase phase);
@@ -83,6 +84,11 @@ class WifiController {
   String pendingPassword_;
   String lastError_;
   bool hasSaved_ = false;
+  String savedSsid_;
+  String savedPassword_;
+  bool savedAttempting_ = false;
+  uint32_t savedAttemptMs_ = 0;
+  uint32_t lostSinceMs_ = 0;
   uint32_t phaseStartMs_ = 0;
   uint32_t attemptStartMs_ = 0;
   bool attemptStarted_ = false;

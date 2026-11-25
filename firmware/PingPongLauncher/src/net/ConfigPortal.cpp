@@ -67,7 +67,11 @@ void ConfigPortal::handleScan() {
     count = WIFI_SCAN_FAILED;
   }
   if (count == WIFI_SCAN_FAILED) {
-    WiFi.scanNetworks(true);
+    if (WiFi.scanNetworks(true) == WIFI_SCAN_FAILED && WiFi.status() != WL_CONNECTED) {
+      Serial.println("[Portal] Scan blocked by a station attempt, stopping it");
+      WiFi.disconnect(false, false);
+      WiFi.scanNetworks(true);
+    }
     server_.send(200, "application/json", "{\"scanning\":true}");
     return;
   }

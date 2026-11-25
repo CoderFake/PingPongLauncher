@@ -15,6 +15,9 @@ constexpr uint8_t REASON_NO_AP_COMPATIBLE_SECURITY = 210;
 constexpr uint8_t REASON_NO_AP_AUTHMODE_THRESHOLD = 211;
 constexpr uint32_t SCAN_WAIT_MS = 4000;
 constexpr uint32_t RETRY_AFTER_MS = 9000;
+constexpr uint32_t SAVED_RETRY_EVERY_MS = 30000;
+constexpr uint32_t SAVED_ATTEMPT_MS = 12000;
+constexpr uint32_t LOST_PORTAL_AFTER_MS = 60000;
 
 /**
  * Returns true for disconnect reasons that mean the password was rejected.
@@ -58,18 +61,16 @@ void WifiController::begin(const String& deviceId) {
       ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   WiFi.setHostname((String("pingpong-") + deviceId_).c_str());
 
-  String ssid;
-  String password;
-  hasSaved_ = store_.load(ssid, password);
+  hasSaved_ = store_.load(savedSsid_, savedPassword_);
   if (!hasSaved_) {
     Serial.println("[WiFi] No saved credentials");
     startPortal();
     return;
   }
 
-  Serial.printf("[WiFi] Connecting to saved network '%s'\n", ssid.c_str());
+  Serial.printf("[WiFi] Connecting to saved network '%s'\n", savedSsid_.c_str());
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid.c_str(), password.c_str());
+  WiFi.begin(savedSsid_.c_str(), savedPassword_.c_str());
   setPhase(Phase::StaConnecting);
 }
 
@@ -86,9 +87,8 @@ void WifiController::update(uint32_t nowMs) {
       break;
     case Phase::Portal:
       portal_.loop();
-      if (hasSaved_ && WiFi.status() == WL_CONNECTED) {
-        Serial.println("[WiFi] Saved network came back, closing portal");
-        finishPortal();
+      if (hasSaved_) {
+        retrySavedNetwork(nowMs);
       }
       break;
     case Phase::PortalConnecting:
@@ -102,6 +102,15 @@ void WifiController::update(uint32_t nowMs) {
       }
       break;
     case Phase::Online:
+      if (WiFi.status() == WL_CONNECTED) {
+        lostSinceMs_ = 0;
+      } else if (lostSinceMs_ == 0) {
+        lostSinceMs_ = nowMs;
+      } else if (nowMs - lostSinceMs_ >= LOST_PORTAL_AFTER_MS) {
+        Serial.println("[WiFi] Network lost for too long, opening portal");
+        lostSinceMs_ = 0;
+        startPortal();
+      }
       break;
   }
 }
@@ -120,6 +129,10 @@ void WifiController::resetCredentials() {
 }
 
 void WifiController::startPortal() {
+  WiFi.setAutoReconnect(false);
+  WiFi.disconnect(false, false);
+  savedAttempting_ = false;
+  savedAttemptMs_ = millis();
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(apSsid_.c_str(), AppConfig::AP_PASSWORD);
   delay(100);
@@ -134,14 +147,39 @@ void WifiController::finishPortal() {
   portal_.stop();
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
   Serial.printf("[WiFi] Switched to STA, IP %s\n", WiFi.localIP().toString().c_str());
   setPhase(Phase::Online);
+}
+
+void WifiController::retrySavedNetwork(uint32_t nowMs) {
+  bool clientOnAp = WiFi.softAPgetStationNum() > 0;
+  if (savedAttempting_) {
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("[WiFi] Saved network came back, closing portal");
+      savedAttempting_ = false;
+      finishPortal();
+    } else if (clientOnAp || nowMs - savedAttemptMs_ >= SAVED_ATTEMPT_MS) {
+      WiFi.disconnect(false, false);
+      savedAttempting_ = false;
+      savedAttemptMs_ = nowMs;
+    }
+    return;
+  }
+  if (!clientOnAp && nowMs - savedAttemptMs_ >= SAVED_RETRY_EVERY_MS &&
+      WiFi.scanComplete() != WIFI_SCAN_RUNNING) {
+    Serial.printf("[WiFi] Retrying saved network '%s'\n", savedSsid_.c_str());
+    WiFi.begin(savedSsid_.c_str(), savedPassword_.c_str());
+    savedAttempting_ = true;
+    savedAttemptMs_ = nowMs;
+  }
 }
 
 void WifiController::requestConnect(const String& ssid, const String& password) {
   if (phase_ == Phase::PortalConnecting || phase_ == Phase::PortalSuccess) {
     return;
   }
+  savedAttempting_ = false;
   pendingSsid_ = ssid;
   pendingPassword_ = password;
   lastError_ = "";
@@ -183,6 +221,8 @@ void WifiController::checkPortalAttempt(uint32_t nowMs) {
   if (WiFi.status() == WL_CONNECTED) {
     store_.save(pendingSsid_, pendingPassword_);
     hasSaved_ = true;
+    savedSsid_ = pendingSsid_;
+    savedPassword_ = pendingPassword_;
     Serial.printf("[WiFi] Joined '%s', IP %s\n", pendingSsid_.c_str(),
                   WiFi.localIP().toString().c_str());
     setPhase(Phase::PortalSuccess);
