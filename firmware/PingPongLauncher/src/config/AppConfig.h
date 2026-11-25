@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #ifndef FIRMWARE_VERSION
-#define FIRMWARE_VERSION "1.2.5"
+#define FIRMWARE_VERSION "1.2.6"
 #endif
 
 /**
@@ -39,7 +39,7 @@ constexpr uint8_t FLYWHEEL_PWM_BITS = 10;
 constexpr uint8_t FLYWHEEL_RAMP_STEP = 2;
 constexpr uint32_t FLYWHEEL_RAMP_INTERVAL_MS = 20;
 constexpr uint32_t FLYWHEEL_SETTLE_MS = 1500;
-constexpr bool FLYWHEEL_SENSE_ENABLED = true;
+constexpr bool FLYWHEEL_SENSE_ENABLED = false;
 constexpr uint32_t FLYWHEEL_SENSE_WINDOW_MS = 100;
 
 constexpr uint32_t SERVO_PWM_FREQ = 50;

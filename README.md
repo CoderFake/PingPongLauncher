@@ -45,7 +45,7 @@ pingpong-launcher/
 
 **Nguồn:** nguồn 5V 20A cấp cho VIN của ESP32, 2 servo và LCD. Mạch boost 5→12V (≥5A) lấy từ nguồn 5V và cấp riêng cho VIN+ của 2 AOD4184. Không cấp servo từ chân 5V của ESP32 hay từ cổng USB: MG996R kéo 1–2.5A lúc khởi động, làm sụt áp và ESP32 tự reset.
 
-**Khóa an toàn bánh đà:** piston chỉ đẩy khi cả 2 bánh đà được đặt tốc độ lớn hơn 0 và firmware đọc lại được xung PWM ở **ngay chân PWM trên module AOD4184**. Từ chân PWM của mỗi module, nối thêm 1 dây về GPIO16 (SB1) và GPIO17 (SB2). Nếu dây PWM từ ESP32 sang module bị rút hoặc lỏng, chân đọc lại không thấy xung, firmware không cho piston chạy, LCD báo `No PWM: top`, `No PWM: bottom` hoặc `No PWM: both`, và Serial in `[Launcher] Feeding blocked`. Không dùng tính năng này thì đặt `FLYWHEEL_SENSE_ENABLED = false`.
+**Khóa an toàn bánh đà:** piston chỉ đẩy khi cả 2 bánh đà được đặt tốc độ lớn hơn 0 và firmware đọc lại được xung PWM ở **ngay chân PWM trên module AOD4184**. Từ chân PWM của mỗi module, nối thêm 1 dây về GPIO16 (SB1) và GPIO17 (SB2). Nếu dây PWM từ ESP32 sang module bị rút hoặc lỏng, chân đọc lại không thấy xung, firmware không cho piston chạy, LCD báo `No PWM: top`, `No PWM: bottom` hoặc `No PWM: both`, và Serial in `[Launcher] Feeding blocked`. Mặc định tắt (`FLYWHEEL_SENSE_ENABLED = false`), khi đó piston chỉ chạy khi cả 2 bánh được đặt tốc độ lớn hơn 0. Nối xong 2 dây đọc lại thì đổi thành `true`.
 
 **Nút nhấn:** dùng nút nhấn nhả 2 chân, một chân vào GPIO, chân kia xuống GND. Firmware bật điện trở kéo lên bên trong và tự chống dội, không cần linh kiện ngoài.
 
