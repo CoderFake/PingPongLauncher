@@ -68,22 +68,22 @@ Các thông số nằm trong `AppConfig.h`:
 
 | Hằng số | Mặc định | Ý nghĩa |
 |---|---|---|
-| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 0° / 60° | Góc nghỉ (piston xa nhất, 14.5cm) và góc đẩy |
+| `FEED_DOWN_DEG` / `FEED_UP_DEG` | 0° / 60° | Góc nghỉ (piston xa nhất, 15cm) và góc đẩy |
 | `SERVO_MS_PER_60DEG` | 200 | Thời gian servo quay 60°. MG996R ở 5V khoảng 190–200ms, ở 6V khoảng 150ms |
 | `FEED_HOLD_UP_MS` | 120 | Thời gian giữ ở đỉnh sau khi đã quay xong |
 | `FEED_SETTLE_DOWN_MS` | 250 | Thời gian chờ quả kế tiếp lăn vào sau khi hạ |
 | `FEED_RATE_MAX` | 35 | Số quả/phút tối đa, để servo luôn quay hết hành trình |
 
-Cơ cấu tay quay: tay servo 6.5cm, thanh nối 8.5cm, servo đặt thẳng hàng với piston. Lắp tay servo khi servo đang ở góc nghỉ 0°: tay lệch 17° so với đường đi của piston, khoảng cách trục servo đến chốt piston 14.5cm, và đặt về phía mà servo quay tiếp thì piston lùi về servo. Tính từ góc nghỉ, piston chạm thân servo ở khoảng 52–55°, `FEED_UP_DEG` đang đặt 60°, kiểm tra kỹ khe hở với thân servo.
+Cơ cấu tay quay: tay servo 6.5cm, thanh nối 8.5cm, servo đặt thẳng hàng với piston. Lắp tay servo khi servo đang ở góc nghỉ 0°: tay servo chĩa thẳng về phía piston, nằm trên đường đi của piston, khoảng cách trục servo đến chốt piston 15cm (mở tối đa). Quay sang phía nào cũng được vì hai phía đối xứng. Piston chạm thân servo ở khoảng 69–72°, `FEED_UP_DEG` đang đặt 60°.
 
-| Góc servo | Trục → chốt piston | Piston đã đi |
-|---|---|---|
-| 0° | 14.5cm | 0 |
-| 18° | 13.0cm | 1.5cm |
-| 28° | 11.8cm | 2.8cm |
-| 38° | 10.4cm | 4.2cm |
-| 48° | 8.9cm | 5.6cm |
-| 52° | 8.3cm | 6.2cm (cách thân servo 0.5cm) |
+| Góc servo | Trục → chốt piston | Piston đã đi | Khe hở tới thân servo |
+|---|---|---|---|
+| 0° | 15.0cm | 0 | 7.2cm |
+| 30° | 13.5cm | 1.5cm | 5.7cm |
+| 45° | 11.7cm | 3.3cm | 3.9cm |
+| 60° | 9.6cm | 5.4cm | 1.8cm |
+| 65° | 8.9cm | 6.1cm | 1.1cm |
+| 69° | 8.3cm | 6.7cm | 0.5cm |
 
 Thời gian đi lên và đi xuống được tính từ góc hành trình và `SERVO_MS_PER_60DEG`, nên piston luôn quay hết góc trước khi đổi chiều. Muốn bắn nhanh hơn 35 quả/phút thì thu hẹp hành trình hoặc cấp 6V cho servo, sau đó tăng `FEED_RATE_MAX` (và sửa `feed.max` trong `web/src/config/limits.ts` cho khớp).
 
